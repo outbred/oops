@@ -3,14 +3,11 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
 using System.Threading.Tasks;
 
-namespace UI.Models.Collections
+namespace URF.Base
 {
     /// <summary>
     /// To be used to track changes within a certain scope.
@@ -25,16 +22,11 @@ namespace UI.Models.Collections
     public class TrackableScope
     {
         private static TrackableScope _current = null;
-        private ConcurrentQueue<Change> _changes = new ConcurrentQueue<Change>();
+        private IQueue<Change> _changes = new ConcurrentList<Change>();
         private readonly string _scopeName;
         private static readonly object _currentLocker = new object();
 
-#if NO_CHANGES_TRACKED
-        public static TrackableScope Current => null;
-#else
         public static TrackableScope Current => _current;
-#endif
-
 
         /// <summary>
         /// Factory method for working with undoable scopes.  If a scope is currently in use, will return that one.  
@@ -64,11 +56,6 @@ namespace UI.Models.Collections
             _scopeName = scopeName;
         }
 
-        public void RaisePropertyChangedOnUndo(Action<string> onPropChanged, object instance, [CallerMemberName] string propertyName = null)
-        {
-            TrackChange(propertyName, instance, () => null, ignore => onPropChanged(propertyName));
-        }
-
         /// <summary>
         /// Tracks changes to a instance, allowing the instance to react to undo events via an Action
         /// </summary>
@@ -81,10 +68,6 @@ namespace UI.Models.Collections
         /// <exception cref="ArgumentNullException">If the property name is empty, instance is null, or onUndo is null</exception>
         public void TrackChange(string propertyName, object instance, Func<object> oldValue, Action<object> onUndo)
         {
-#if NO_CHANGES_TRACKED
-            return;
-#endif
-
             // do not allow changes to be tracked in the middle of an undo...well, maybe we do in case of redoing an undo
             if ( !ReferenceEquals(_current, this) || _changes == null)
             {
@@ -101,20 +84,11 @@ namespace UI.Models.Collections
                 throw new ArgumentNullException("onUndo, propertyname, instance, oldValue", "Must be a valid property name and have an undoable action associated to an instance.");
             }
 
-            // this check can get really expensive for a huge amount of changes tracked (1,000's), so let's just try tracking them all - Brent 2 Nov 2015
-            //if (_changes.Any(c => c.PropertyName == propertyName && ReferenceEquals(instance, c.Instance)))
-            //{
-            //    //Log.WriteLine($"Disallowing change to be tracked for property {propertyName}");
-            //    return; // block duplicates in the same scope
-            //}
-
             var old = oldValue();
             var change = new Change() { PropertyName = propertyName, Instance = instance, OldValue = old, OnUndo = onUndo };
 
             _changes.Enqueue(change);
         }
-
-        public static Func<bool> IsCurrentThreadUiThread { get; set; }
 
         /// <summary>
         /// Ends change tracking for the current scope.
@@ -124,9 +98,7 @@ namespace UI.Models.Collections
         {
             if (ReferenceEquals(_current, this) && _current._scopeName == scopeName)
             {
-#if !NO_CHANGES_TRACKED
                 Debug.WriteLine($"Completed tracking changes for '{scopeName}' with {(this._changes?.Count ?? 0)} changes tracked.");
-#endif
                 _current = null;
             }
         }
@@ -136,12 +108,12 @@ namespace UI.Models.Collections
         /// 
         /// The idea is to mark them dirty before an undo, or for diagnostic purposes
         /// </summary>
-        public List<object> InstancesTracked
+        public IEnumerable<object> InstancesTracked
         {
-            get { return _changes.Select(c => c.Instance).Distinct().ToList(); }
+            get { return _changes.Select(c => c.Instance).Distinct(); }
         }
 
-        public ConcurrentQueue<Change> TrackedChanges => _changes;
+        public IList<Change> TrackedChanges => _changes;
         public string Name => _scopeName;
 
         /// <summary>
@@ -165,17 +137,13 @@ namespace UI.Models.Collections
                 {
                     if (_changes == null)
                         return;
-#if !NO_CHANGES_TRACKED
                     Debug.WriteLine($"Beginning undo for scope named '{_scopeName}'");
-#endif
                     foreach (var change in _changes.Reverse()) // this pops in order, from top of stack on down
                     {
                         Debug.WriteLine($"Undoing change for property '{change.PropertyName}' in instance of type '{change.Instance.GetType().Name}' to old value '{change.OldValue}'");
                         change.OnUndo(change.OldValue);
                     }
-#if !NO_CHANGES_TRACKED
                     Debug.WriteLine($"Completed undo for scope named '{_scopeName}'");
-#endif
                     _changes = null;
                 }
             });

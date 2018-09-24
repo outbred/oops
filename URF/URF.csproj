@@ -64,23 +64,15 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Base\CommandBase.cs" />
-    <Compile Include="Base\CommandItemDetailsBase.cs" />
-    <Compile Include="Base\CommandScope.cs" />
-    <Compile Include="Base\CommandStateManager.cs" />
+    <Compile Include="Base\ConcurrentList.cs" />
+    <Compile Include="Base\IConcurrentList.cs" />
     <Compile Include="Base\TrackableCollection.cs" />
     <Compile Include="Base\TrackableScope.cs" />
     <Compile Include="Base\TrackableStack.cs" />
     <Compile Include="Base\TrackableViewModel.cs" />
     <Compile Include="Interfaces\IAsyncCommand.cs" />
     <Compile Include="Interfaces\ICanceller.cs" />
-    <Compile Include="Interfaces\ICommandBase.cs" />
-    <Compile Include="Interfaces\ICommandRedoer.cs" />
-    <Compile Include="Interfaces\ICommandRunner.cs" />
-    <Compile Include="Interfaces\ICommandUndoer.cs" />
     <Compile Include="Interfaces\IDispatcher.cs" />
-    <Compile Include="Interfaces\IUndoRedoCommandRunner.cs" />
-    <Compile Include="Interfaces\UndoRedoStackItem.cs" />
     <Compile Include="MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
