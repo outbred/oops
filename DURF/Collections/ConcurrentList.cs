@@ -4,13 +4,12 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime;
-using System.Text;
-using System.Threading.Tasks;
+using DURF.Interfaces;
 
-namespace URF.Base
+namespace DURF.Collections
 {
     /// <summary>
-    /// Thread-safe list.  No change tracking.  Also has Queue and Stack extensions
+    /// Thread-safe list.  No change tracking.  Also has efficient Queue and Stack extensions
     /// </summary>
     /// <typeparam name="TType"></typeparam>
     public class ConcurrentList<TType> : IConcurrentList<TType>
@@ -369,6 +368,15 @@ namespace URF.Base
         }
 
         /// <summary>
+        /// Same as extension method, but thread safe.
+        /// </summary>
+        public TType LastOrDefault()
+        {
+            lock (_syncRoot)
+                return (_internal.Count < 1) ? default(TType) : _internal[Count - 1];
+        }
+
+        /// <summary>
         /// Same as extension method, but thread safe, and efficient since it doesn't get an enumerator
         /// </summary>
         public bool Any()
@@ -432,6 +440,8 @@ namespace URF.Base
             }
         }
 
+        #region IQueue<TType>
+
         /// <inheritdoc />
         void IQueue<TType>.Enqueue(TType item)
         {
@@ -446,8 +456,8 @@ namespace URF.Base
                 if (_internal.Count == 0)
                     throw new IndexOutOfRangeException($"Queue is empty!");
 
-                var item = _internal[Count - 1];
-                _internal.RemoveAt(Count - 1);
+                var item = _internal[0];
+                _internal.RemoveAt(0);
                 return item;
             }
         }
@@ -461,8 +471,8 @@ namespace URF.Base
                 if (_internal.Count == 0)
                     return false;
 
-                item = _internal[Count - 1];
-                _internal.RemoveAt(Count -1);
+                item = _internal[0];
+                _internal.RemoveAt(0);
                 return true;
             }
         }
@@ -470,7 +480,66 @@ namespace URF.Base
         /// <inheritdoc />
         bool IQueue<TType>.Any()
         {
-            return Any();
+            return Count > 0;
         }
+
+        IEnumerable<TType> IQueue<TType>.GetEnumerable()
+        {
+            lock (_syncRoot)
+                return this.ToList();
+        }
+
+        #endregion
+
+        #region IStack<TType>
+
+        /// <inheritdoc />
+        void IStack<TType>.Push(TType item)
+        {
+            Insert(0, item);
+        }
+
+        /// <inheritdoc />
+        TType IStack<TType>.Pop()
+        {
+            lock (_syncRoot)
+            {
+                if (_internal.Count == 0)
+                    throw new IndexOutOfRangeException($"Stack is empty!");
+
+                var item = _internal[0];
+                _internal.RemoveAt(0);
+                return item;
+            }
+        }
+
+        /// <inheritdoc />
+        bool IStack<TType>.TryPop(out TType item)
+        {
+            item = default(TType);
+            lock (_syncRoot)
+            {
+                if (_internal.Count == 0)
+                    return false;
+
+                item = _internal[0];
+                _internal.RemoveAt(0);
+                return true;
+            }
+        }
+
+        /// <inheritdoc />
+        bool IStack<TType>.Any()
+        {
+            return Count > 0;
+        }
+
+        IEnumerable<TType> IStack<TType>.GetEnumerable()
+        {
+            lock(_syncRoot)
+                return this.ToList();
+        }
+
+        #endregion
     }
 }

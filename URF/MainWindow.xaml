@@ -4,9 +4,43 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:URF"
+        xmlns:demo="clr-namespace:DURF.Demo"
         mc:Ignorable="d"
+        d:DataContext="{d:DesignInstance d:Type=demo:MainWindowViewModel, IsDesignTimeCreatable=True}"
         Title="MainWindow" Height="450" Width="800">
+    <Window.Resources>
+        <ResourceDictionary>
+            <Style TargetType="TextBlock">
+                <Setter Property="Margin" Value="3,0,0,3" />
+            </Style>
+            <Style TargetType="TextBox">
+                <Setter Property="Margin" Value="3,0,0,3" />
+            </Style>
+        </ResourceDictionary>
+    </Window.Resources>
     <Grid>
-        
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <StackPanel Grid.Row="0" Orientation="Horizontal">
+            <Button Content="Commit" Command="{Binding CommitChanges}" />
+            <Button Content="Undo" Command="{Binding Undo}" />
+            <Button Content="Redo" Command="{Binding Redo}" />
+        </StackPanel>
+        <UniformGrid Grid.Row="1" Columns="2" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <TextBlock Text="First Name: " />
+            <TextBox Text="{Binding FirstName}" />
+            <TextBlock Text="Last Name: " />
+            <TextBox Text="{Binding LastName}" />
+            <TextBlock Text="Address: " />
+            <TextBox Text="{Binding Address}" />
+            <TextBlock Text="City: " />
+            <TextBox Text="{Binding City}" />
+            <TextBlock Text="State: " />
+            <TextBox Text="{Binding State}" />
+            <TextBlock Text="Zip: " />
+            <TextBox Text="{Binding Zip}" />
+        </UniformGrid>
     </Grid>
 </Window>

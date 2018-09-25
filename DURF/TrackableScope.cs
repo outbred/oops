@@ -1,13 +1,14 @@
 ﻿//#define NO_CHANGES_TRACKED
 
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using DURF.Collections;
+using DURF.Interfaces;
 
-namespace URF.Base
+namespace DURF
 {
     /// <summary>
     /// To be used to track changes within a certain scope.
@@ -22,7 +23,7 @@ namespace URF.Base
     public class TrackableScope
     {
         private static TrackableScope _current = null;
-        private IQueue<Change> _changes = new ConcurrentList<Change>();
+        private IStack<Change> _changes = new ConcurrentList<Change>();
         private readonly string _scopeName;
         private static readonly object _currentLocker = new object();
 
@@ -38,16 +39,19 @@ namespace URF.Base
         ///  - this is useful when a Command use one or more other Commands - they're all on the parent scope
         /// </summary>
         /// <param name="scopeName"></param>
-        /// <returns></returns>
-        public static TrackableScope CurrentOrNew(string scopeName = "Track Changes")
+        /// <returns>True if new scope</returns>
+        public static bool CurrentOrNew(out TrackableScope scope, string scopeName = "Track Changes")
         {
             lock (_currentLocker)
             {
+                scope = _current;
+
                 if (_current != null)
-                    return _current;
+                    return false;
 
                 _current = new TrackableScope(scopeName);
-                return _current;
+                scope = _current;
+                return true;
             }
         }
 
@@ -59,14 +63,13 @@ namespace URF.Base
         /// <summary>
         /// Tracks changes to a instance, allowing the instance to react to undo events via an Action
         /// </summary>
-        /// <param name="propertyName"></param>
-        /// <param name="instance"></param>
-        /// <param name="oldValue">strong reference to old value is stored when Func is called</param>
+        /// <param name="propertyName">(optional) PropertyName associated with change</param>
+        /// <param name="instance">(optional) The object instance associated with the change</param>
         /// <param name="onUndo">Action to be performed when the scope is disposed (undo occurs). Thread marshaling within the Func<> is the caller's responsibility.</param>
-        /// <returns>True if tracking is allowed within this TrackableScope for the propname/instace, 
+        /// <returns>True if tracking is allowed within this TrackableScope for the propname/instance, 
         /// false if this scope is not the current scope (locked) or a duplicate value for an existing prop name/instance is received</returns>
         /// <exception cref="ArgumentNullException">If the property name is empty, instance is null, or onUndo is null</exception>
-        public void TrackChange(string propertyName, object instance, Func<object> oldValue, Action<object> onUndo)
+        public void TrackChange(Action onUndo, string propertyName = null, object instance = null)
         {
             // do not allow changes to be tracked in the middle of an undo...well, maybe we do in case of redoing an undo
             if ( !ReferenceEquals(_current, this) || _changes == null)
@@ -75,19 +78,18 @@ namespace URF.Base
                 return;
             }
 
-            if (onUndo == null || string.IsNullOrWhiteSpace(propertyName) || instance == null || oldValue == null)
+            if (onUndo == null)
             {
 #if DEBUG
                 if (Debugger.IsAttached)
                     Debugger.Break();
 #endif
-                throw new ArgumentNullException("onUndo, propertyname, instance, oldValue", "Must be a valid property name and have an undoable action associated to an instance.");
+                throw new ArgumentNullException(nameof(onUndo), @"Must have an undoable action associated to an instance.");
             }
 
-            var old = oldValue();
-            var change = new Change() { PropertyName = propertyName, Instance = instance, OldValue = old, OnUndo = onUndo };
+            var change = new Change() { PropertyName = propertyName, Instance = instance, OnUndo = onUndo };
 
-            _changes.Enqueue(change);
+            _changes.Push(change);
         }
 
         /// <summary>
@@ -106,7 +108,7 @@ namespace URF.Base
         /// <summary>
         /// Gives back a list of all instance that were tracked during this scope
         /// 
-        /// The idea is to mark them dirty before an undo, or for diagnostic purposes
+        /// Purely for diagnostic purposes
         /// </summary>
         public IEnumerable<object> InstancesTracked
         {
@@ -138,10 +140,10 @@ namespace URF.Base
                     if (_changes == null)
                         return;
                     Debug.WriteLine($"Beginning undo for scope named '{_scopeName}'");
-                    foreach (var change in _changes.Reverse()) // this pops in order, from top of stack on down
+                    foreach (var change in _changes.GetEnumerable()) // in order, from top of 'stack' on down
                     {
-                        Debug.WriteLine($"Undoing change for property '{change.PropertyName}' in instance of type '{change.Instance.GetType().Name}' to old value '{change.OldValue}'");
-                        change.OnUndo(change.OldValue);
+                        Debug.WriteLine($"Undoing change for property '{change.PropertyName}' in instance of type '{change.Instance.GetType().Name}'");
+                        change.OnUndo();
                     }
                     Debug.WriteLine($"Completed undo for scope named '{_scopeName}'");
                     _changes = null;
@@ -154,10 +156,9 @@ namespace URF.Base
     public class Change
     {
         public string PropertyName { get; set; }
+
         public object Instance { get; set; } 
 
-        public object OldValue { get; set; }
-
-        public Action<object> OnUndo { get; set; }
+        public Action OnUndo { get; set; }
     }
 }

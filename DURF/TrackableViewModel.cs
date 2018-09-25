@@ -1,19 +1,21 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
-using UI.Models.Collections;
+using DURF.Collections;
+using DURF.Interfaces;
 
-namespace URF.Base
+namespace DURF 
 {
-    public abstract class ViewModelBase : INotifyPropertyChanged
+    /// <summary>
+    /// ViewModel base class that raise prop changed using convenient Get/Set methods and tracks property changes
+    /// </summary>
+    public abstract class TrackableViewModel : INotifyPropertyChanged, IViewStateAware
     {
         #region Fields
         private Dictionary<string, object> _propMap = null;
         #endregion
+
+        protected virtual bool TrackChanges { get; } = true;
 
         protected T Get<T>(T defaultValue, [CallerMemberName] string name = null)
         {
@@ -88,28 +90,27 @@ namespace URF.Base
         /// <param name="raiseEvent">whether or not the event will actually be raised</param>
         protected virtual void OnPropertyChanging(string name, object currentValue, bool raiseEvent)
         {
+            if(TrackChanges)
+                TrackableScope.Current?.TrackChange(() => Set(currentValue, name, raiseEvent));
         }
-    }
 
-    public abstract class TrackableViewModel : ViewModelBase
-    {
-        #region Fields
-        private Dictionary<string, Action> _onUndo;
-        #endregion
+        #region Implementation of IViewStateAware
 
-        /// <summary>
-        /// If there is an action to be performed whenever a property is undone, add it here
-        /// </summary>
-        protected Dictionary<string, Action> OnUndo => _onUndo ?? (_onUndo = new Dictionary<string, Action>());
-
-        protected override void OnPropertyChanging(string name, object currentValue, bool raiseEvent)
+        /// <inheritdoc />
+        void IViewStateAware.Loaded()
         {
-            TrackableScope.Current?.TrackChange(name, this, () => currentValue, old =>
-            {
-                Set(old, name, raiseEvent);
-                if (OnUndo.ContainsKey(name))
-                    OnUndo[name]?.Invoke();
-            });
+            OnLoaded();
         }
+
+        /// <inheritdoc />
+        void IViewStateAware.Unloaded()
+        {
+            OnUnloaded();   
+        }
+
+        protected virtual void OnLoaded() { }
+        protected virtual void OnUnloaded() { }
+
+        #endregion
     }
 }

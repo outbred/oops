@@ -5,6 +5,10 @@ using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Threading;
+using DURF;
+using DURF.Collections;
+using UI.WpfCore.Services;
 
 namespace URF
 {
@@ -13,5 +17,17 @@ namespace URF
     /// </summary>
     public partial class App : Application
     {
+        #region Overrides of Application
+
+        /// <inheritdoc />
+        protected override void OnStartup(StartupEventArgs e)
+        {
+            base.OnStartup(e);
+            // current dispatcher is the UI thread for the App
+            WpfDispatcher.Initialize(Dispatcher.CurrentDispatcher);
+            DispatcherHolder.Dispatcher = new WpfDispatcher();
+        }
+
+        #endregion
     }
 }

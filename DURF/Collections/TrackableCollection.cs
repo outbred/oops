@@ -1,22 +1,17 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
-using System.ComponentModel.Design;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime;
 using System.Runtime.Serialization;
 using System.Security.Permissions;
 using System.Threading;
-using System.Threading.Tasks;
-using URF.Base;
-using URF.Interfaces;
+using DURF.Interfaces;
 
-namespace UI.Models.Collections
+namespace DURF.Collections
 {
     /// <summary>
     /// An ordered collection that ensures it is always on the correct thread for collectionchanged and propertychanged events.
@@ -122,7 +117,7 @@ namespace UI.Models.Collections
                         _collection.Insert(newIndex, oldItem);
 
                     if (TrackChanges)
-                        TrackableScope.Current?.TrackChange("Items", this, () => null, oldItems => { this.Move(newIndex, oldIndex); });
+                        TrackableScope.Current?.TrackChange(() => { this.Move(newIndex, oldIndex); });
 
                     this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Move, (object)oldItem, newIndex, oldIndex));
                 }
@@ -151,7 +146,7 @@ namespace UI.Models.Collections
                     if (chgd)
                     {
                         if (TrackChanges)
-                            TrackableScope.Current?.TrackChange("Items", this, () => items, _ =>  this.AddRange(items));
+                            TrackableScope.Current?.TrackChange(() =>  this.AddRange(items));
                         this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
                     }
                 }
@@ -186,7 +181,7 @@ namespace UI.Models.Collections
 
                         Count--;
                         if (TrackChanges)
-                            TrackableScope.Current?.TrackChange("Items", this, () => null, _ => this.InsertItem(index, current));
+                            TrackableScope.Current?.TrackChange(() => this.InsertItem(index, current));
                         this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, current, index));
                     }
                 }
@@ -218,7 +213,7 @@ namespace UI.Models.Collections
                     }
                     Count++;
                     if (TrackChanges)
-                        TrackableScope.Current?.TrackChange("Items", this, () => null, _ => this.Remove(item));
+                        TrackableScope.Current?.TrackChange(() => this.Remove(item));
 
                     this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, item, indexAdded));
                 }
@@ -253,7 +248,7 @@ namespace UI.Models.Collections
                     Count++;
 
                     if (TrackChanges)
-                        TrackableScope.Current?.TrackChange("Items", this, () => null, _ => this.Remove(existingItem));
+                        TrackableScope.Current?.TrackChange(() => this.Remove(existingItem));
 
                     this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, itemInsertedBeforeExisting, indexAdded));
                 }
@@ -278,7 +273,7 @@ namespace UI.Models.Collections
                     {
                         Count--;
                         if (TrackChanges)
-                            TrackableScope.Current?.TrackChange("Items", this, () => null, _ => this.InsertItem(idx, item));
+                            TrackableScope.Current?.TrackChange(() => this.InsertItem(idx, item));
                         this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, value, idx));
                     }
                 }
@@ -368,7 +363,7 @@ namespace UI.Models.Collections
                     {
                         Count--;
                         if (TrackChanges)
-                            TrackableScope.Current?.TrackChange("Items", this, () => null, _ => this.InsertItem(indx, item));
+                            TrackableScope.Current?.TrackChange(() => this.InsertItem(indx, item));
                         this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, item, indx));
                     }
                 }
@@ -435,7 +430,7 @@ namespace UI.Models.Collections
 
                     _collection[index] = item;
                     if (TrackChanges)
-                        TrackableScope.Current?.TrackChange("Items", this, () => null, _ => this.SetItem(index, current));
+                        TrackableScope.Current?.TrackChange(() => this.SetItem(index, current));
                     this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Replace, item, current, index));
                 }
             });
@@ -568,7 +563,7 @@ namespace UI.Models.Collections
                         _collection.Insert(position++, item);
                         Count++;
                         if (TrackChanges)
-                            TrackableScope.Current?.TrackChange("Items", this, () => null, _ => this.Remove(item));
+                            TrackableScope.Current?.TrackChange(() => this.Remove(item));
                     }
 
                     this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
@@ -610,7 +605,7 @@ namespace UI.Models.Collections
 
                     if (TrackChanges && anyRemoved)
                     {
-                        TrackableScope.Current?.TrackChange("Items", this, () => null, _ =>
+                        TrackableScope.Current?.TrackChange(() =>
                         {
                             foreach (var tuple in tuples)
                                 this.InsertItem(tuple.Item1, tuple.Item2);
@@ -648,7 +643,7 @@ namespace UI.Models.Collections
                     Count++;
 
                     if (TrackChanges)
-                        TrackableScope.Current?.TrackChange("Items", this, () => null, _ => Remove(item));
+                        TrackableScope.Current?.TrackChange(() => Remove(item));
                     this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, item, indexAdded));
                 }
             });
@@ -715,21 +710,19 @@ namespace UI.Models.Collections
                 Trace.TraceError(message, ex);
         }
 
-        public static IDispatcher Dispatcher { get; set; }
-
         private void PushToUiThreadSync(Action action, bool force = false)
         {
             if (action == null)
                 return;
 
-            if ((!force && ShutOffCollectionChangedEventsOnUiThread) || !UseDispatcherForCollectionChanged || (Dispatcher?.CheckAccess() ?? true))
+            if ((!force && ShutOffCollectionChangedEventsOnUiThread) || !UseDispatcherForCollectionChanged || (DispatcherHolder.Dispatcher?.CheckAccess() ?? true))
             {
                 action();
             }
             else
             {
                 var allDone = new ManualResetEvent(false);
-                Dispatcher.BeginInvoke(() =>
+                DispatcherHolder.Dispatcher.BeginInvoke(() =>
                 {
                     try { action(); }
                     catch (Exception ex) { Log(@"Unable to finish changing collection", ex); }
@@ -757,6 +750,11 @@ namespace UI.Models.Collections
 
         private bool _shutOffCollectionChangedEvents = false;
 
+        /// <summary>
+        /// Turns off CollectionChanged events on the UI thread if true
+        ///
+        /// Fires a Reset CollectionChanged event if toggled back to false
+        /// </summary>
         public bool ShutOffCollectionChangedEventsOnUiThread
         {
             get => _shutOffCollectionChangedEvents;
@@ -801,7 +799,7 @@ namespace UI.Models.Collections
                      */
 
                     if (UseDispatcherForCollectionChanged && CollectionChanged != null)
-                        Dispatcher.Wait();
+                        DispatcherHolder.Dispatcher.Wait();
 
                     if (!_shutOffCollectionChangedEvents && _changeDetectedWhileNotificationIsShutOff)
                         OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
@@ -811,7 +809,7 @@ namespace UI.Models.Collections
             }
         }
 
-        public bool UseDispatcherForCollectionChanged { get; set; }
+        public bool UseDispatcherForCollectionChanged { get; set; } = true;
 
         #region IConvertible
 
@@ -1100,15 +1098,12 @@ namespace UI.Models.Collections
         /// <inheritdoc />
         TType IQueue<TType>.Dequeue()
         {
-            lock (SyncRoot)
+            if (!((IQueue<TType>)this).TryDequeue(out var item))
             {
-                if (_collection.Count == 0)
-                    throw new IndexOutOfRangeException($"Queue is empty!");
-
-                var item = _collection[Count - 1];
-                _collection.RemoveAt(Count - 1);
-                return item;
+                throw new IndexOutOfRangeException($"Queue is empty!");
             }
+
+            return item;
         }
 
         /// <inheritdoc />
@@ -1120,8 +1115,8 @@ namespace UI.Models.Collections
                 if (_collection.Count == 0)
                     return false;
 
-                item = _collection[Count - 1];
-                _collection.RemoveAt(Count - 1);
+                item = _collection[0];
+                _collection.RemoveAt(0);
                 return true;
             }
         }
@@ -1130,6 +1125,12 @@ namespace UI.Models.Collections
         bool IQueue<TType>.Any()
         {
             return Count > 0;
+        }
+
+        IEnumerable<TType> IQueue<TType>.GetEnumerable()
+        {
+            lock (SyncRoot)
+                return this.ToList();
         }
 
         #endregion
@@ -1145,15 +1146,12 @@ namespace UI.Models.Collections
         /// <inheritdoc />
         TType IStack<TType>.Pop()
         {
-            lock (SyncRoot)
+            if (!((IStack<TType>)this).TryPop(out var item))
             {
-                if (_collection.Count == 0)
-                    throw new IndexOutOfRangeException($"Stack is empty!");
-
-                var item = _collection[0];
-                _collection.RemoveAt(0);
-                return item;
+                throw new IndexOutOfRangeException($"Stack is empty!");
             }
+
+            return item;
         }
 
         /// <inheritdoc />
@@ -1176,6 +1174,13 @@ namespace UI.Models.Collections
         {
             return Count > 0;
         }
+
+        IEnumerable<TType> IStack<TType>.GetEnumerable()
+        {
+            lock (SyncRoot)
+                return this.ToList();
+        }
+
 
         #endregion
     }

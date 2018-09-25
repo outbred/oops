@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
-using System.Windows.Threading;
 
-namespace URF.Interfaces
+namespace DURF.Interfaces
 {
     public interface IDispatcher
     {
@@ -45,12 +44,14 @@ namespace URF.Interfaces
 
         /// <summary>
         /// Call when you want the UI thread to settle down (process pending UI actions)
+        ///
+        /// Pumps the UI thread until all messages have been processed.
         /// </summary>
         /// <param name="priority"></param>
-        void Wait(DispatcherPriority priority = DispatcherPriority.ApplicationIdle);
+        void Wait();
 
         /// <summary>
-        /// If true, caller is on the UI thread
+        /// If true, caller is on that UI thread (in case you have multiple)
         /// </summary>
         /// <returns></returns>
         bool CheckAccess();

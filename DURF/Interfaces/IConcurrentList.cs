@@ -2,13 +2,13 @@
 using System.Collections;
 using System.Collections.Generic;
 
-namespace URF.Base 
+namespace DURF.Interfaces 
 {
     /// <summary>
     /// Queue like methods
     /// </summary>
     /// <typeparam name="TType"></typeparam>
-    public interface IQueue<TType>
+    public interface IQueue<TType> : IList<TType>
     {
         /// <summary>
         /// Adds an item to a FIFO queue
@@ -34,13 +34,19 @@ namespace URF.Base
         /// </summary>
         /// <returns>True if any items in queue</returns>
         bool Any();
+
+        /// <summary>
+        /// Enumerates the Queue w/o modifying it
+        /// </summary>
+        /// <returns></returns>
+        IEnumerable<TType> GetEnumerable();
     }
 
     /// <summary>
     /// Queue like methods
     /// </summary>
     /// <typeparam name="TType"></typeparam>
-    public interface IStack<TType>
+    public interface IStack<TType> : IList<TType>
     {
         /// <summary>
         /// Adds an item to a FILO stack onto the top
@@ -66,9 +72,15 @@ namespace URF.Base
         /// </summary>
         /// <returns></returns>
         bool Any();
+
+        /// <summary>
+        /// Enumerates the Stack w/o modifying it
+        /// </summary>
+        /// <returns></returns>
+        IEnumerable<TType> GetEnumerable();
     }
 
-    public interface IConcurrentList<TType> : IList, IQueue<TType>, IList<TType>
+    public interface IConcurrentList<TType> : IList, IQueue<TType>, IStack<TType>
     {
         /// <summary>
         /// Similiar to Add, but only does the add if not already in the list.  Basically, it lets you use a
@@ -125,11 +137,6 @@ namespace URF.Base
         /// <param name="checker"></param>
         /// <returns></returns>
         bool Any(Func<TType, bool> checker);
-
-        /// <summary>
-        /// Same as LINQ extension method, but thread safe, and efficient since it doesn't get an enumerator
-        /// </summary>
-        bool Any();
 
         /// <summary>
         /// Same as LINQ extension method, but thread safe, and efficient since it doesn't get an enumerator

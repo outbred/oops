@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading;
 
-namespace URF.Interfaces {
+namespace DURF.Interfaces {
     public interface ICanceller
     {
         /// <summary>
