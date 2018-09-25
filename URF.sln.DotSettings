@@ -427,6 +427,7 @@ public $DisplayType$ $PropName$ &#xD;
 	get =&gt; Get&lt;$propertyType$&gt;();&#xD;
 	set =&gt; Set(value);&#xD;
 }</s:String>
+	<s:Boolean x:Key="/Default/UserDictionary/Words/=Trackable/@EntryIndexedValue">True</s:Boolean>
 	
 	
 	

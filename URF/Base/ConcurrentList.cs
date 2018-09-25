@@ -10,13 +10,14 @@ using System.Threading.Tasks;
 namespace URF.Base
 {
     /// <summary>
-    /// Thread-safe list
+    /// Thread-safe list.  No change tracking.  Also has Queue and Stack extensions
     /// </summary>
     /// <typeparam name="TType"></typeparam>
     public class ConcurrentList<TType> : IConcurrentList<TType>
     {
         private List<TType> _internal;
 
+        [DebuggerStepThrough]
         public ConcurrentList()
         {
             _internal = new List<TType>();
@@ -29,7 +30,7 @@ namespace URF.Base
         }
 
         /// <summary>
-        /// Returns a copy of the list
+        /// Returns a new list with a ref to all items in this collection, in the same order
         /// </summary>
         /// <returns></returns>
         public IList<TType> GetCopy()
@@ -281,6 +282,7 @@ namespace URF.Base
             lock(_syncRoot)
                 return _internal.IndexOf(item);
         }
+
         /// <summary>
         /// Find in backwards order for performance
         /// Static so we can use in other classes
@@ -323,15 +325,14 @@ namespace URF.Base
                 _internal.AddRange(source);
         }
 
-        public void RemoveAll(TType item)
+        public void RemoveAllInstances(TType item)
         {
             lock(_syncRoot)
                 while (_internal.Remove(item)) { }
         }
 
         /// <summary>
-        /// Safely transfer all elements from a thread safe list to this one.
-        /// Locks both sides throughout the copy and the clear.
+        /// Safely transfer all elements from a list to this one.
         /// </summary>
         /// <param name="source">Source list that will be transferred (and emptied)</param>
         public void TransferElements(IList<TType> source)
@@ -363,7 +364,6 @@ namespace URF.Base
         /// </summary>
         public TType FirstOrDefault()
         {
-            // needed a first or default that is thread safe. - Joe (23 Jun 2016)
             lock(_syncRoot)
                 return (_internal.Count < 1) ? default(TType) : _internal[0];
         }
@@ -447,8 +447,23 @@ namespace URF.Base
                     throw new IndexOutOfRangeException($"Queue is empty!");
 
                 var item = _internal[Count - 1];
-                _internal.Remove(item);
+                _internal.RemoveAt(Count - 1);
                 return item;
+            }
+        }
+
+        /// <inheritdoc />
+        bool IQueue<TType>.TryDequeue(out TType item)
+        {
+            item = default(TType);
+            lock (_syncRoot)
+            {
+                if (_internal.Count == 0)
+                    return false;
+
+                item = _internal[Count - 1];
+                _internal.RemoveAt(Count -1);
+                return true;
             }
         }
 

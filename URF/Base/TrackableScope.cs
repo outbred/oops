@@ -154,7 +154,7 @@ namespace URF.Base
     public class Change
     {
         public string PropertyName { get; set; }
-        public object Instance { get; set; } // could be INotifyPropertyChanged, but no need to limit it (as of now)
+        public object Instance { get; set; } 
 
         public object OldValue { get; set; }
 

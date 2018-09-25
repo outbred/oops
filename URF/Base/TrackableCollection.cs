@@ -19,32 +19,33 @@ using URF.Interfaces;
 namespace UI.Models.Collections
 {
     /// <summary>
-    /// An observable collection that ensures it is always on the correct thread for collectionchanged and propertychanged events (based on subscriber's thread)
+    /// An ordered collection that ensures it is always on the correct thread for collectionchanged and propertychanged events.
     /// 
-    /// This collection is also thread-safe (concurrency is ok). Merely supply the IDispatcher to utilitize this class.
+    /// This collection is also thread-safe (concurrency is ok). Merely supply the IDispatcher to utilize this class w/ UI elements.
+    /// 
     /// All methods are synchronous in nature because most UI controls expect the bound collection to remain unchanged throughout
-    /// the CollectionChanged event cycle
+    /// the CollectionChanged event cycle.
+    ///
+    /// This collection can act like a List<typeparam name="TType"></typeparam>, a Queue<typeparam name="TType"></typeparam>, or a Stack<typeparam name="TType"></typeparam>
+    /// depending on your desired behavior.
     /// </summary>
     /// <typeparam name="TType"></typeparam>
     [Serializable]
     [DebuggerDisplay(@"Count = {Count}")]
-    public class TrackableCollection<TType> : IList<TType>, IList, IReadOnlyList<TType>, IConvertible, ISerializable, INotifyCollectionChanged, INotifyPropertyChanged
+    public class TrackableCollection<TType> : IList<TType>, IList, IReadOnlyList<TType>, IConvertible, ISerializable, INotifyCollectionChanged, INotifyPropertyChanged, IQueue<TType>, IStack<TType>
     {
         private readonly List<TType> _collection = new List<TType>();
-        private object _syncRoot = new object();
-        private int _count = 0;
-
 
         public TrackableCollection(IEnumerable<TType> collection) : this()
         {
 
             _collection = collection == null ? new List<TType>() : new List<TType>(collection.ToList()); // added ToList()  - Joe (08 Apr 2016)
-            _count = _collection.Count;
+            Count = _collection.Count;
         }
 
         public TrackableCollection()
         {
-            NeverOnUiThread = false;
+            UseDispatcherForCollectionChanged = true;
         }
 
         public bool TrackChanges { get; set; } = true;
@@ -87,7 +88,7 @@ namespace UI.Models.Collections
         #region Thread-safe methods
 
         /// <summary>
-        /// Moves an item from oldIndex to newIndex.  Fires a CollectionChanged.Reset event to avoid latency issues when completed
+        /// Moves an item from oldIndex to newIndex. 
         /// </summary>
         /// <param name="oldIndex"></param>
         /// <param name="newIndex"></param>
@@ -99,7 +100,7 @@ namespace UI.Models.Collections
             var oldItem = this[oldIndex];
             PushToUiThreadSync(() =>
             {
-                lock (_syncRoot)
+                lock (SyncRoot)
                 {
                     CheckReentrancy();
                     _collection.RemoveAt(oldIndex);
@@ -138,7 +139,7 @@ namespace UI.Models.Collections
 
             PushToUiThreadSync(() =>
             {
-                lock (_syncRoot)
+                lock (SyncRoot)
                 {
                     this.CheckReentrancy();
 
@@ -146,7 +147,7 @@ namespace UI.Models.Collections
 
                     var items = _collection.ToList();
                     _collection.Clear();
-                    _count = 0;
+                    Count = 0;
                     if (chgd)
                     {
                         if (TrackChanges)
@@ -161,7 +162,7 @@ namespace UI.Models.Collections
         /// Removes the item at the specified index of the collection.
         /// </summary>
         /// <param name="index">The zero-based index of the element to remove.</param>
-        protected virtual void RemoveItem(int index)
+        protected void RemoveItem(int index)
         {
             if (Count <= index)
                 return;
@@ -169,7 +170,7 @@ namespace UI.Models.Collections
 
             PushToUiThreadSync(() =>
             {
-                lock (_syncRoot)
+                lock (SyncRoot)
                 {
                     // during the context switch a couple things could have happened: 
                     // 1. The collection could have been modified (waiting on lock(this) b/c a different Remove/Add call was happening)
@@ -183,7 +184,7 @@ namespace UI.Models.Collections
                     {
                         this.CheckReentrancy();
 
-                        _count--;
+                        Count--;
                         if (TrackChanges)
                             TrackableScope.Current?.TrackChange("Items", this, () => null, _ => this.InsertItem(index, current));
                         this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, current, index));
@@ -196,11 +197,11 @@ namespace UI.Models.Collections
         /// Inserts an item into the collection at the specified index.
         /// </summary>
         /// <param name="index">The zero-based index at which <paramref name="item"/> should be inserted.</param><param name="item">The object to insert.</param>
-        protected virtual void InsertItem(int index, TType item)
+        protected void InsertItem(int index, TType item)
         {
             PushToUiThreadSync(() =>
             {
-                lock (_syncRoot)
+                lock (SyncRoot)
                 {
                     this.CheckReentrancy();
 
@@ -208,14 +209,14 @@ namespace UI.Models.Collections
                     if (index > (_collection.Count - 1))
                     {
                         _collection.Add(item);
-                        indexAdded = _count; 
+                        indexAdded = Count; 
                     }
                     else
                     {
                         _collection.Insert(index, item);
                         indexAdded = index; 
                     }
-                    _count++;
+                    Count++;
                     if (TrackChanges)
                         TrackableScope.Current?.TrackChange("Items", this, () => null, _ => this.Remove(item));
 
@@ -233,7 +234,7 @@ namespace UI.Models.Collections
         {
             PushToUiThreadSync(() =>
             {
-                lock (_syncRoot)
+                lock (SyncRoot)
                 {
                     this.CheckReentrancy();
                     var index = _collection.IndexOf(existingItem);
@@ -242,14 +243,14 @@ namespace UI.Models.Collections
                     if (index > (_collection.Count - 1))
                     {
                         _collection.Add(itemInsertedBeforeExisting);
-                        indexAdded = _count;
+                        indexAdded = Count;
                     }
                     else
                     {
                         _collection.Insert(index, itemInsertedBeforeExisting);
                         indexAdded = index; 
                     }
-                    _count++;
+                    Count++;
 
                     if (TrackChanges)
                         TrackableScope.Current?.TrackChange("Items", this, () => null, _ => this.Remove(existingItem));
@@ -267,7 +268,7 @@ namespace UI.Models.Collections
         {
             PushToUiThreadSync(() =>
             {
-                lock (_syncRoot)
+                lock (SyncRoot)
                 {
                     this.CheckReentrancy();
 
@@ -275,7 +276,7 @@ namespace UI.Models.Collections
                     var idx = _collection.IndexOf(item);
                     if (_collection.Remove(item))
                     {
-                        _count--;
+                        Count--;
                         if (TrackChanges)
                             TrackableScope.Current?.TrackChange("Items", this, () => null, _ => this.InsertItem(idx, item));
                         this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, value, idx));
@@ -321,7 +322,7 @@ namespace UI.Models.Collections
             [TargetedPatchingOptOut(@"Performance critical to inline across NGen image boundaries")]
             get
             {
-                lock (_syncRoot)
+                lock (SyncRoot)
                     return _collection[index];
             }
             set => this.SetItem(index, value);
@@ -339,7 +340,7 @@ namespace UI.Models.Collections
             [TargetedPatchingOptOut(@"Performance critical to inline across NGen image boundaries")]
             get
             {
-                lock (_syncRoot)
+                lock (SyncRoot)
                     return _collection[index];
             }
             set => this.SetItem(index, (TType)value);
@@ -359,13 +360,13 @@ namespace UI.Models.Collections
             bool removed = false;
             PushToUiThreadSync(() =>
             {
-                lock (_syncRoot)
+                lock (SyncRoot)
                 {
                     var indx = _collection.IndexOf(item);
                     removed = _collection.Remove(item);
                     if (removed)
                     {
-                        _count--;
+                        Count--;
                         if (TrackChanges)
                             TrackableScope.Current?.TrackChange("Items", this, () => null, _ => this.InsertItem(indx, item));
                         this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, item, indx));
@@ -383,7 +384,7 @@ namespace UI.Models.Collections
         {
             // Safer Copy; Cubby's GetChildren kept failing trying to copy the Toy's Array into a temp variable
             // because the origional would grow and exceed the target's size - Neil (01 Apr 2016)
-            lock (_syncRoot)
+            lock (SyncRoot)
             {
                 if (_collection.Any())
                     _collection.CopyTo((TType[])array, index);
@@ -393,7 +394,7 @@ namespace UI.Models.Collections
         /// <summary>
         /// Only updated within a write-lock, so we should be good to always read from it
         /// </summary>
-        public int Count => _count;
+        public int Count { get; private set; } = 0;
 
         /// <summary>
         /// Gets an object that can be used to synchronize access to the <see cref="T:System.Collections.ICollection"/>.
@@ -401,7 +402,7 @@ namespace UI.Models.Collections
         /// <returns>
         /// An object that can be used to synchronize access to the <see cref="T:System.Collections.ICollection"/>.
         /// </returns>
-        public object SyncRoot => _syncRoot;
+        public object SyncRoot { get; } = new object();
 
         /// <summary>
         /// Gets a value indicating whether access to the <see cref="T:System.Collections.ICollection"/> is synchronized (thread safe).
@@ -428,7 +429,7 @@ namespace UI.Models.Collections
             var current = this[index];
             PushToUiThreadSync(() =>
             {
-                lock (_syncRoot)
+                lock (SyncRoot)
                 {
                     this.CheckReentrancy();
 
@@ -446,12 +447,12 @@ namespace UI.Models.Collections
         /// <param name="item">The object to add to the <see cref="T:System.Collections.Generic.ICollection`1"/>.</param><exception cref="T:System.NotSupportedException">The <see cref="T:System.Collections.Generic.ICollection`1"/> is read-only.</exception>
         public void Add(TType item)
         {
-            InsertItem(_count, item);
+            InsertItem(Count, item);
         }
 
         void ICollection<TType>.Add(TType item)
         {
-            InsertItem(_count, item);
+            InsertItem(Count, item);
         }
 
         /// <summary>
@@ -463,7 +464,7 @@ namespace UI.Models.Collections
         /// <param name="value">The object to add to the <see cref="T:System.Collections.IList"/>. </param><exception cref="T:System.NotSupportedException">The <see cref="T:System.Collections.IList"/> is read-only.-or- The <see cref="T:System.Collections.IList"/> has a fixed size. </exception>
         int IList.Add(object value)
         {
-            var idx = _count;
+            var idx = Count;
             InsertItem(idx, (TType)value);
             return idx;
         }
@@ -516,21 +517,16 @@ namespace UI.Models.Collections
         public bool Contains(TType item)
         {
             bool contains = false;
-            lock (_syncRoot)
-            {
+            lock (SyncRoot)
                 contains = _collection.Contains(item);
-            }
 
             return contains;
         }
 
         public void CopyTo(TType[] array, int index)
         {
-            lock (_syncRoot)
+            lock (SyncRoot)
             {
-                // Safer Copy; Cubby's GetChildren kept failing trying to copy the Toy's Array into a temp variable
-                // because the origional would grow and exceed the target's size - Neil (01 Apr 2016)
-
                 if (_collection.Any())
                     _collection.CopyTo(array, index);
             }
@@ -539,10 +535,9 @@ namespace UI.Models.Collections
         public int IndexOf(TType item)
         {
             int index = 0;
-            lock (_syncRoot)
-            {
+            lock (SyncRoot)
                 index = _collection.IndexOf(item);
-            }
+
             return index;
         }
 
@@ -561,17 +556,17 @@ namespace UI.Models.Collections
         {
             if (stuff == null || ReferenceEquals(stuff, this))
                 return;
-            var toAdd = stuff as IList<TType> ?? stuff.ToList(); // Needed this outside debug - broke release build since used below - Joe (04 Nov 2015)
+            var toAdd = stuff as IList<TType> ?? stuff.ToList();
             PushToUiThreadSync(() =>
             {
-                lock (_syncRoot)
+                lock (SyncRoot)
                 {
                     //var start = position;
                     //int count = 0;
                     foreach (var item in toAdd)
                     {
                         _collection.Insert(position++, item);
-                        _count++;
+                        Count++;
                         if (TrackChanges)
                             TrackableScope.Current?.TrackChange("Items", this, () => null, _ => this.Remove(item));
                     }
@@ -583,7 +578,7 @@ namespace UI.Models.Collections
         }
 
         /// <summary>
-        /// Efficient bulk-add to an observable collection
+        /// Efficient bulk-add to a collection
         /// </summary>
         /// <param name="stuff"></param>
         public void AddRange(IEnumerable<TType> stuff) => InsertRange(_collection.Count, stuff);
@@ -593,7 +588,7 @@ namespace UI.Models.Collections
             var enumerable = children as IList<TType> ?? children.ToList();
             PushToUiThreadSync(() =>
             {
-                lock (_syncRoot)
+                lock (SyncRoot)
                 {
                     bool anyRemoved = false;
                     this.CheckReentrancy();
@@ -606,7 +601,7 @@ namespace UI.Models.Collections
                         {
                             tuples.Add(new Tuple<int, TType>(index, child));
                             _collection.RemoveAt(index);
-                            _count--;
+                            Count--;
                             anyRemoved = true;
                         }
                         else
@@ -617,7 +612,6 @@ namespace UI.Models.Collections
                     {
                         TrackableScope.Current?.TrackChange("Items", this, () => null, _ =>
                         {
-                            // I would like an InsertRange here, but that doesn't ensure that indices are restored correctly - Brent (03 Mar 2016)
                             foreach (var tuple in tuples)
                                 this.InsertItem(tuple.Item1, tuple.Item2);
                         });
@@ -631,7 +625,7 @@ namespace UI.Models.Collections
 
         public List<TType> ToList()
         {
-            lock (_syncRoot)
+            lock (SyncRoot)
             {
                 var result = _collection.ToList();
                 return result;
@@ -642,7 +636,7 @@ namespace UI.Models.Collections
         {
             PushToUiThreadSync(() =>
             {
-                lock (_syncRoot)
+                lock (SyncRoot)
                 {
                     this.CheckReentrancy();
 
@@ -651,7 +645,7 @@ namespace UI.Models.Collections
 
                     _collection.Add(item);
                     var indexAdded = _collection.Count - 1;
-                    _count++;
+                    Count++;
 
                     if (TrackChanges)
                         TrackableScope.Current?.TrackChange("Items", this, () => null, _ => Remove(item));
@@ -680,7 +674,7 @@ namespace UI.Models.Collections
         {
             _changeDetectedWhileNotificationIsShutOff = ShutOffCollectionChangedEventsOnUiThread;
 
-            if (!NeverOnUiThread && ShutOffCollectionChangedEventsOnUiThread)
+            if (UseDispatcherForCollectionChanged && ShutOffCollectionChangedEventsOnUiThread)
             {
                 _pendingNotifications.Add(e);
                 return;
@@ -721,35 +715,25 @@ namespace UI.Models.Collections
                 Trace.TraceError(message, ex);
         }
 
-        private static IDispatcher _dispatcher = null;
-        private static IDispatcher Dispatcher = _dispatcher; //?? (_dispatcher = IoC.Current?.Container.GetInstance<IDispatcher>());
-        protected void PushToUiThreadSync(Action action, bool force = false)
+        public static IDispatcher Dispatcher { get; set; }
+
+        private void PushToUiThreadSync(Action action, bool force = false)
         {
             if (action == null)
                 return;
 
-            if ((!force && ShutOffCollectionChangedEventsOnUiThread) || NeverOnUiThread || (Dispatcher?.CheckAccess() ?? true))
+            if ((!force && ShutOffCollectionChangedEventsOnUiThread) || !UseDispatcherForCollectionChanged || (Dispatcher?.CheckAccess() ?? true))
             {
                 action();
             }
             else
             {
                 var allDone = new ManualResetEvent(false);
-                //var start = DateTime.Now;
                 Dispatcher.BeginInvoke(() =>
                 {
-                    try
-                    {
-                        action();
-                    }
-                    catch (Exception ex)
-                    {
-                        Log(@"Unable to finish changing collection", ex);
-                    }
-                    finally
-                    {
-                        allDone.Set();
-                    }
+                    try { action(); }
+                    catch (Exception ex) { Log(@"Unable to finish changing collection", ex); }
+                    finally { allDone.Set(); }
                 });
                 allDone.WaitOne();
             }
@@ -816,7 +800,7 @@ namespace UI.Models.Collections
                      * CollChg (Reset)
                      */
 
-                    if (!NeverOnUiThread && CollectionChanged != null)
+                    if (UseDispatcherForCollectionChanged && CollectionChanged != null)
                         Dispatcher.Wait();
 
                     if (!_shutOffCollectionChangedEvents && _changeDetectedWhileNotificationIsShutOff)
@@ -827,11 +811,7 @@ namespace UI.Models.Collections
             }
         }
 
-        public bool NeverOnUiThread
-        {
-            get => _neverOnUiThread;
-            set => _neverOnUiThread = value;
-        }
+        public bool UseDispatcherForCollectionChanged { get; set; }
 
         #region IConvertible
 
@@ -1050,12 +1030,11 @@ namespace UI.Models.Collections
         {
             info.AddValue(@"Items", _collection.ToList());
             info.AddValue(@"BlockCollectionChanged", this.ShutOffCollectionChangedEventsOnUiThread);
-            info.AddValue(@"NeverOnUiThread", this.NeverOnUiThread);
+            info.AddValue(@"UseDispatcherForCollectionChanged", this.UseDispatcherForCollectionChanged);
             info.AddValue(@"TrackChanges", this.TrackChanges);
         }
 
         private List<TType> _itemsDeserialized = null;
-        private bool _neverOnUiThread;
         private bool _changeDetectedWhileNotificationIsShutOff;
 
         protected TrackableCollection(SerializationInfo info, StreamingContext context)
@@ -1064,8 +1043,8 @@ namespace UI.Models.Collections
             while (enumerator.MoveNext())
             {
                 var key = enumerator.Name;
-                if (key == @"NeverOnUiThread")
-                    NeverOnUiThread = (bool)enumerator.Value;
+                if (key == @"UseDispatcherForCollectionChanged")
+                    UseDispatcherForCollectionChanged = (bool)enumerator.Value;
                 else if (key == @"BlockCollectionChanged")
                     _shutOffCollectionChangedEvents = (bool)enumerator.Value;
                 else if (key == @"Items")
@@ -1078,7 +1057,7 @@ namespace UI.Models.Collections
         public virtual IEnumerator<TType> GetEnumerator()
         {
             List<TType> result = null;
-            lock (_syncRoot)
+            lock (SyncRoot)
             {
                 result = _collection.ToList();
             }
@@ -1092,14 +1071,12 @@ namespace UI.Models.Collections
         {
             if (_itemsDeserialized != null)
             {
-                // don't fire collection changed events after deserialization - bbulla
-                // can cause stackoverflows if listeners are creating on this collection during deserialization
+                // don't fire collection changed events after deserialization
+                // can cause stackoverflows if listeners are created on this collection during deserialization
                 _collection.AddRange(_itemsDeserialized);
-                _count = _collection.Count;
+                Count = _collection.Count;
             }
         }
-
-        #region Implementation of IEnumerable
 
         /// <summary>
         /// Returns an enumerator that iterates through a collection.
@@ -1110,6 +1087,94 @@ namespace UI.Models.Collections
         IEnumerator IEnumerable.GetEnumerator()
         {
             return GetEnumerator();
+        }
+
+        #region IQueue<TType>
+
+        /// <inheritdoc />
+        void IQueue<TType>.Enqueue(TType item)
+        {
+            Add(item);
+        }
+
+        /// <inheritdoc />
+        TType IQueue<TType>.Dequeue()
+        {
+            lock (SyncRoot)
+            {
+                if (_collection.Count == 0)
+                    throw new IndexOutOfRangeException($"Queue is empty!");
+
+                var item = _collection[Count - 1];
+                _collection.RemoveAt(Count - 1);
+                return item;
+            }
+        }
+
+        /// <inheritdoc />
+        bool IQueue<TType>.TryDequeue(out TType item)
+        {
+            item = default(TType);
+            lock (SyncRoot)
+            {
+                if (_collection.Count == 0)
+                    return false;
+
+                item = _collection[Count - 1];
+                _collection.RemoveAt(Count - 1);
+                return true;
+            }
+        }
+
+        /// <inheritdoc />
+        bool IQueue<TType>.Any()
+        {
+            return Count > 0;
+        }
+
+        #endregion
+
+        #region IStack<TType>
+
+        /// <inheritdoc />
+        void IStack<TType>.Push(TType item)
+        {
+            Insert(0, item);
+        }
+
+        /// <inheritdoc />
+        TType IStack<TType>.Pop()
+        {
+            lock (SyncRoot)
+            {
+                if (_collection.Count == 0)
+                    throw new IndexOutOfRangeException($"Stack is empty!");
+
+                var item = _collection[0];
+                _collection.RemoveAt(0);
+                return item;
+            }
+        }
+
+        /// <inheritdoc />
+        bool IStack<TType>.TryPop(out TType item)
+        {
+            item = default(TType);
+            lock (SyncRoot)
+            {
+                if (_collection.Count == 0)
+                    return false;
+
+                item = _collection[0];
+                _collection.RemoveAt(0);
+                return true;
+            }
+        }
+
+        /// <inheritdoc />
+        bool IStack<TType>.Any()
+        {
+            return Count > 0;
         }
 
         #endregion
