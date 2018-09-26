@@ -5,6 +5,7 @@ using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Threading;
 using DURF;
 using DURF.Collections;
@@ -25,7 +26,10 @@ namespace URF
             base.OnStartup(e);
             // current dispatcher is the UI thread for the App
             WpfDispatcher.Initialize(Dispatcher.CurrentDispatcher);
-            DispatcherHolder.Dispatcher = new WpfDispatcher();
+            PlatformImplementation.Dispatcher = new WpfDispatcher();
+            PlatformImplementation.ToRaiseCanExecuteChanged = CommandManager.InvalidateRequerySuggested;
+            PlatformImplementation.OnCanExecuteSubscribed = h => CommandManager.RequerySuggested += h;
+            PlatformImplementation.OnCanExecuteUnsubscribed = h => CommandManager.RequerySuggested -= h;
         }
 
         #endregion

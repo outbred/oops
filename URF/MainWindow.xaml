@@ -31,16 +31,53 @@
 
         </ResourceDictionary>
     </Window.Resources>
-    <Grid>
+    <Grid x:Name="root">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
         <StackPanel Grid.Row="0" Orientation="Horizontal">
-            <Button Content="Track" Command="{Binding Track}" />
-            <Button Content="Commit" Command="{Binding CommitChanges}" />
-            <Button Content="Undo" Command="{Binding Undo}" />
-            <Button Content="Redo" Command="{Binding Redo}" />
+            <Menu >
+                <MenuItem Header="Track" Command="{Binding Track}" />
+                <MenuItem Command="{Binding CommitChanges}">
+                    <MenuItem.Header>
+                        <TextBlock>
+                            <Run Text="Commit '" /><Run Text="{Binding Current.Name, Mode=OneWay}" /><Run Text="' (" /><Run Text="{Binding Current.TrackedChanges.Count, Mode=OneWay}" /><Run Text=" changes)" />
+                        </TextBlock>
+                    </MenuItem.Header>
+                </MenuItem>
+                <MenuItem ItemsSource="{Binding Manager.Undoables}">
+                    <MenuItem.ItemContainerStyle>
+                        <Style TargetType="{x:Type MenuItem}">
+                            <Setter Property="Command" Value="{Binding ElementName=root, Path=DataContext.Manager.Undo}" />
+                            <Setter Property="CommandParameter" Value="{Binding}" />
+                            <Setter Property="Header">
+                                <Setter.Value>
+                                    <TextBlock>
+                                        <Run Text="Undo '" /><Run Text="{Binding Name, Mode=OneWay}" /><Run Text="' with " /><Run Text="{Binding TrackedChanges.Count, Mode=OneWay}" /><Run Text=" changes" />
+                                    </TextBlock>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </MenuItem.ItemContainerStyle>
+                </MenuItem>
+                <MenuItem ItemsSource="{Binding Manager.Redoables}">
+                    <MenuItem.ItemContainerStyle>
+                        <Style TargetType="{x:Type MenuItem}">
+                            <Setter Property="Command" Value="{Binding ElementName=root, Path=DataContext.Manager.Redo}" />
+                            <Setter Property="CommandParameter" Value="{Binding}" />
+                            <Setter Property="Header">
+                                <Setter.Value>
+                                    <TextBlock>
+                                        <Run Text="Redo '" /><Run Text="{Binding Name, Mode=OneWay}" /><Run Text="' with " /><Run Text="{Binding TrackedChanges.Count, Mode=OneWay}" /><Run Text=" changes" />
+                                    </TextBlock>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </MenuItem.ItemContainerStyle>
+                </MenuItem>
+
+            </Menu>
         </StackPanel>
         <UniformGrid Grid.Row="1" Columns="2" HorizontalAlignment="Center" VerticalAlignment="Center">
             <TextBlock Text="First Name: " />

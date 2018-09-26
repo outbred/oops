@@ -712,14 +712,14 @@ namespace DURF.Collections
             if (action == null)
                 return;
 
-            if ((!force && ShutOffCollectionChangedEventsOnUiThread) || !UseDispatcherForCollectionChanged || (DispatcherHolder.Dispatcher?.CheckAccess() ?? true))
+            if ((!force && ShutOffCollectionChangedEventsOnUiThread) || !UseDispatcherForCollectionChanged || (PlatformImplementation.Dispatcher?.CheckAccess() ?? true))
             {
                 action();
             }
             else
             {
                 var allDone = new ManualResetEvent(false);
-                DispatcherHolder.Dispatcher.BeginInvoke(() =>
+                PlatformImplementation.Dispatcher.BeginInvoke(() =>
                 {
                     try { action(); }
                     catch (Exception ex) { Log(@"Unable to finish changing collection", ex); }
@@ -796,7 +796,7 @@ namespace DURF.Collections
                      */
 
                     if (UseDispatcherForCollectionChanged && CollectionChanged != null)
-                        DispatcherHolder.Dispatcher.Wait();
+                        PlatformImplementation.Dispatcher.Wait();
 
                     if (!_shutOffCollectionChangedEvents && _changeDetectedWhileNotificationIsShutOff)
                         OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));

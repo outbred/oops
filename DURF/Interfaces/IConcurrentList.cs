@@ -80,6 +80,8 @@ namespace DURF.Interfaces
         IEnumerable<TType> GetEnumerable();
 
         void Clear();
+
+        int Count { get; }
     }
 
     public interface IConcurrentList<TType> : IList, IQueue<TType>, IStack<TType>

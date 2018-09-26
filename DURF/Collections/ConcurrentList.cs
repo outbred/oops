@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime;
+using System.Runtime.CompilerServices;
 using DURF.Interfaces;
 
 namespace DURF.Collections
@@ -12,7 +14,7 @@ namespace DURF.Collections
     /// Thread-safe list.  No change tracking.  Also has efficient Queue and Stack extensions
     /// </summary>
     /// <typeparam name="TType"></typeparam>
-    public class ConcurrentList<TType> : IConcurrentList<TType>
+    public class ConcurrentList<TType> : IConcurrentList<TType>, INotifyPropertyChanged
     {
         private List<TType> _internal;
 
@@ -112,6 +114,8 @@ namespace DURF.Collections
         {
             lock(_syncRoot)
                 _internal.Add(item);
+
+            OnPropertyChanged(nameof(Count));
         }
 
         /// <summary>
@@ -128,6 +132,7 @@ namespace DURF.Collections
                 if (_internal.Contains(item))
                     return false;
                 _internal.Add(item);
+                OnPropertyChanged(nameof(Count));
                 return true;
             }
         }
@@ -142,6 +147,7 @@ namespace DURF.Collections
             {
                 var idx = _internal.Count;
                 _internal.Add(item);
+                OnPropertyChanged(nameof(Count));
                 return idx;
             }
         }
@@ -164,6 +170,7 @@ namespace DURF.Collections
         {
             lock(_syncRoot)
                 _internal.Clear();
+            OnPropertyChanged(nameof(Count));
         }
 
         int IList.IndexOf(object value)
@@ -201,8 +208,11 @@ namespace DURF.Collections
 
         public bool Remove(TType item)
         {
+            bool result = false;
             lock(_syncRoot)
-                return _internal.Remove(item);
+                result = _internal.Remove(item);
+            OnPropertyChanged(nameof(Count));
+            return result;
         }
 
         /// <summary>
@@ -211,8 +221,11 @@ namespace DURF.Collections
         /// <returns>Number removed.</returns>
         public int Remove(IEnumerable<TType> items)
         {
+            int result = 0;
             lock(_syncRoot)
-                return items.Count(item => _internal.Remove(item));
+                result = items.Count(item => _internal.Remove(item));
+            OnPropertyChanged(nameof(Count));
+            return result;
         }
 
         /// <summary>
@@ -245,6 +258,7 @@ namespace DURF.Collections
                 if (idx < 0)
                     return idx;
                 _internal.RemoveAt(idx);
+                OnPropertyChanged(nameof(Count));
                 return idx;
             }
         }
@@ -310,24 +324,28 @@ namespace DURF.Collections
                 else
                     _internal.Add(item);
             }
+            OnPropertyChanged(nameof(Count));
         }
 
         public void RemoveAt(int index)
         {
             lock(_syncRoot)
                 _internal.RemoveAt(index);
+            OnPropertyChanged(nameof(Count));
         }
 
         public void AddRange(IEnumerable<TType> source)
         {
             lock(_syncRoot)
                 _internal.AddRange(source);
+            OnPropertyChanged(nameof(Count));
         }
 
         public void RemoveAllInstances(TType item)
         {
             lock(_syncRoot)
                 while (_internal.Remove(item)) { }
+            OnPropertyChanged(nameof(Count));
         }
 
         /// <summary>
@@ -342,6 +360,7 @@ namespace DURF.Collections
                 _internal.AddRange(sourceList);
                 sourceList.Clear();
             }
+            OnPropertyChanged(nameof(Count));
         }
 
         /// <summary>
@@ -350,12 +369,14 @@ namespace DURF.Collections
         /// </summary>
         public List<TType> ExtractElements()
         {
+            List<TType> tempList = null;
             lock(_syncRoot)
             {
-                var tempList = _internal;
+                tempList = _internal;
                 _internal = new List<TType>();
-                return tempList;
             }
+            OnPropertyChanged(nameof(Count));
+            return tempList;
         }
 
         /// <summary>
@@ -458,6 +479,7 @@ namespace DURF.Collections
 
                 var item = _internal[0];
                 _internal.RemoveAt(0);
+                OnPropertyChanged(nameof(Count));
                 return item;
             }
         }
@@ -473,6 +495,7 @@ namespace DURF.Collections
 
                 item = _internal[0];
                 _internal.RemoveAt(0);
+                OnPropertyChanged(nameof(Count));
                 return true;
             }
         }
@@ -541,5 +564,12 @@ namespace DURF.Collections
         }
 
         #endregion
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
     }
 }

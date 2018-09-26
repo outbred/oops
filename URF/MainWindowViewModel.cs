@@ -4,13 +4,15 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Input;
-using WpfAsyncPack.Command;
+#pragma warning disable 1998
 
 namespace DURF.Demo
 {
     public class MainWindowViewModel : TrackableViewModel
     {
         private Scope _scope;
+        private int _scopeNum = 1;
+        private string ScopeName => $"Address Changes{_scopeNum}";
 
         public string FirstName
         {
@@ -54,7 +56,8 @@ namespace DURF.Demo
         protected override void OnLoaded()
         {
             base.OnLoaded();
-            _scope = new Scope("Address");
+            _scope = new Scope(ScopeName);
+            RaisePropertyChanged(nameof(Current));
         }
 
         /// <inheritdoc />
@@ -66,33 +69,30 @@ namespace DURF.Demo
 
         #endregion
 
-        public AsyncCommand CommitChanges => new AsyncCommand(async (_, t) =>
+        public AsyncCommand CommitChanges => new AsyncCommand(async () =>
         {
             _scope.Dispose();
             _scope = null;
-        }, _ => _scope != null);
+            _scopeNum++;
+            RaisePropertyChanged(nameof(Current));
+        }, () => _scope != null);
 
         public AsyncCommand Track
         {
             get
             {
-                return new AsyncCommand(async (_, t) =>
+                return new AsyncCommand(async () =>
                 {
                     if (_scope != null)
                         return;
-                    _scope = new Scope("Address");
-                }, _ => _scope == null);
+                    _scope = new Scope(ScopeName);
+                    RaisePropertyChanged(nameof(Current));
+                }, () => _scope == null);
             }
         }
 
-        public AsyncCommand Undo => new AsyncCommand(async (_, t) =>
-        {
-            await ScopeManager.Instance.UndoLast();
-        }, _ => ScopeManager.Instance.Undoables.Any());
+        public ScopeManager Manager => ScopeManager.Instance;
 
-        public AsyncCommand Redo => new AsyncCommand(async (_, t) =>
-        {
-            await ScopeManager.Instance.RedoLast();
-        }, _ => ScopeManager.Instance.Redoables.Any());
+        public TrackableScope Current => TrackableScope.Current;
     }
 }
