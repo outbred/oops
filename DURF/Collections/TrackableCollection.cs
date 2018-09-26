@@ -696,6 +696,12 @@ namespace DURF.Collections
                         Log(@"Unable to fire collection changed event cleanly.", ex);
                     }
                 }
+                else // at least fire the prop changed event (if someone is listening)
+                {
+                    if (e.Action != NotifyCollectionChangedAction.Move && e.Action != NotifyCollectionChangedAction.Replace)
+                        this.OnPropertyChanged(nameof(Count));
+                    this.OnPropertyChanged(@"Item[]");
+                }
             }
         }
 
@@ -1112,7 +1118,7 @@ namespace DURF.Collections
                     return false;
 
                 item = _collection[0];
-                _collection.RemoveAt(0);
+                RemoveAt(0);
                 return true;
             }
         }
@@ -1160,7 +1166,7 @@ namespace DURF.Collections
                     return false;
 
                 item = _collection[0];
-                _collection.RemoveAt(0);
+                RemoveAt(0);
                 return true;
             }
         }

@@ -12,7 +12,7 @@ namespace DURF.Demo
     {
         private Scope _scope;
         private int _scopeNum = 1;
-        private string ScopeName => $"Address Changes{_scopeNum}";
+        private string ScopeName => $"Address Changes {_scopeNum}";
 
         public string FirstName
         {

@@ -19,7 +19,7 @@ namespace DURF
         public Scope(string name, ScopeState state = ScopeState.Do)
         {
             _state = state;
-            // if this isn't a 'sub' scope, then save it off to add to undo stack
+            // if this isn't a 'sub' scope, then save it off to add to appropriate stack
             if(TrackableScope.CurrentOrNew(out var scope, name))
                 _scope = scope;
         }

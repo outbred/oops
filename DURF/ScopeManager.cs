@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System.ComponentModel;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using DURF.Collections;
@@ -6,8 +7,10 @@ using DURF.Interfaces;
 
 namespace DURF 
 {
-    public class ScopeManager
+    public class ScopeManager : TrackableViewModel
     {
+        protected override bool TrackChanges => false;
+
         public IStack<TrackableScope> Undoables { get; } = new TrackableCollection<TrackableScope>(){TrackChanges = false};
         public IStack<TrackableScope> Redoables { get; } = new TrackableCollection<TrackableScope>(){TrackChanges = false};
 

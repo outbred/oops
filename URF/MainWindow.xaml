@@ -8,15 +8,15 @@
                  xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
                  mc:Ignorable="d"
                  d:DataContext="{d:DesignInstance d:Type=demo:MainWindowViewModel, IsDesignTimeCreatable=True}"
-                 TextElement.Foreground="{DynamicResource MaterialDesignBody}"
-                 Background="{DynamicResource MaterialDesignPaper}"
                  TextElement.FontWeight="Medium"
                  TextElement.FontSize="14"
                  FontFamily="pack://application:,,,/MaterialDesignThemes.Wpf;component/Resources/Roboto/#Roboto"
                  xmlns:metro="http://metro.mahapps.com/winfx/xaml/controls"
                  GlowBrush="{DynamicResource AccentColorBrush}"
                  BorderThickness="1"
-                 Title="DURF Demo" Height="450" Width="800">
+                 Title="DURF Demo" Height="450" Width="800"
+                TextElement.Foreground="{DynamicResource MaterialDesignBody}"
+                 Background="{DynamicResource MaterialDesignPaper}">
     <Window.Resources>
         <ResourceDictionary>
             <Style TargetType="TextBlock">
@@ -25,10 +25,6 @@
             <Style TargetType="TextBox">
                 <Setter Property="Margin" Value="3,0,0,3" />
             </Style>
-            <Style TargetType="Button" BasedOn="{StaticResource SquareButtonStyle}">
-                <Setter Property="Margin" Value="3,0,0,3" />
-            </Style>
-
         </ResourceDictionary>
     </Window.Resources>
     <Grid x:Name="root">
@@ -42,41 +38,12 @@
                 <MenuItem Command="{Binding CommitChanges}">
                     <MenuItem.Header>
                         <TextBlock>
-                            <Run Text="Commit '" /><Run Text="{Binding Current.Name, Mode=OneWay}" /><Run Text="' (" /><Run Text="{Binding Current.TrackedChanges.Count, Mode=OneWay}" /><Run Text=" changes)" />
+                            <Run Text="Commit '" /><Run Text="{Binding Current.Name, Mode=OneWay}" /><Run Text="' (" /><Run Text="{Binding Current.TrackedChanges.Count, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" /><Run Text=" changes)" />
                         </TextBlock>
                     </MenuItem.Header>
                 </MenuItem>
-                <MenuItem ItemsSource="{Binding Manager.Undoables}">
-                    <MenuItem.ItemContainerStyle>
-                        <Style TargetType="{x:Type MenuItem}">
-                            <Setter Property="Command" Value="{Binding ElementName=root, Path=DataContext.Manager.Undo}" />
-                            <Setter Property="CommandParameter" Value="{Binding}" />
-                            <Setter Property="Header">
-                                <Setter.Value>
-                                    <TextBlock>
-                                        <Run Text="Undo '" /><Run Text="{Binding Name, Mode=OneWay}" /><Run Text="' with " /><Run Text="{Binding TrackedChanges.Count, Mode=OneWay}" /><Run Text=" changes" />
-                                    </TextBlock>
-                                </Setter.Value>
-                            </Setter>
-                        </Style>
-                    </MenuItem.ItemContainerStyle>
-                </MenuItem>
-                <MenuItem ItemsSource="{Binding Manager.Redoables}">
-                    <MenuItem.ItemContainerStyle>
-                        <Style TargetType="{x:Type MenuItem}">
-                            <Setter Property="Command" Value="{Binding ElementName=root, Path=DataContext.Manager.Redo}" />
-                            <Setter Property="CommandParameter" Value="{Binding}" />
-                            <Setter Property="Header">
-                                <Setter.Value>
-                                    <TextBlock>
-                                        <Run Text="Redo '" /><Run Text="{Binding Name, Mode=OneWay}" /><Run Text="' with " /><Run Text="{Binding TrackedChanges.Count, Mode=OneWay}" /><Run Text=" changes" />
-                                    </TextBlock>
-                                </Setter.Value>
-                            </Setter>
-                        </Style>
-                    </MenuItem.ItemContainerStyle>
-                </MenuItem>
-
+                <MenuItem x:Name="UndoMenu" Header="Undo..." IsEnabled="{Binding Manager.Undoables.Count, Converter={StaticResource CountToEnabledConverter}, UpdateSourceTrigger=PropertyChanged}"  />
+                <MenuItem x:Name="RedoMenu" Header="Redo..." IsEnabled="{Binding Manager.Redoables.Count, Converter={StaticResource CountToEnabledConverter}, UpdateSourceTrigger=PropertyChanged}" />
             </Menu>
         </StackPanel>
         <UniformGrid Grid.Row="1" Columns="2" HorizontalAlignment="Center" VerticalAlignment="Center">

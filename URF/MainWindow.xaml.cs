@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -28,6 +29,51 @@ namespace URF
             DataContext = new MainWindowViewModel();
             this.Loaded += (s, e) => ((IViewStateAware) DataContext).Loaded();
             this.Unloaded += (s, e) => ((IViewStateAware) DataContext).Unloaded();
+            var vm = DataContext as MainWindowViewModel;
+            (vm.Manager.Undoables as INotifyCollectionChanged).CollectionChanged += (s, e) =>
+            {
+                UndoMenu.Items.Clear();
+
+                var idx = 1;
+                foreach (var item in vm.Manager.Undoables)
+                {
+                    var menu = new MenuItem()
+                        {
+                            DataContext = item,
+                            Command = vm.Manager.Undo,
+                            CommandParameter = item,
+                            Header = $"({idx++}) Undo '{item.Name}' with {item.TrackedChanges.Count} changes"
+                        };
+                    UndoMenu.Items.Add(menu);
+                }
+            };
+
+            (vm.Manager.Redoables as INotifyCollectionChanged).CollectionChanged += (s, e) =>
+            {
+                RedoMenu.Items.Clear();
+                var idx = 1;
+                foreach (var item in vm.Manager.Redoables.GetEnumerable())
+                {
+                    var menu = new MenuItem()
+                        {
+                            DataContext = item,
+                            Command = vm.Manager.Redo,
+                            CommandParameter = item,
+                            Header = $"({idx++}) Redo '{item.Name}' with {item.TrackedChanges.Count} changes"
+                        };
+                    RedoMenu.Items.Add(menu);
+                }
+            };
+
+            //vm.Manager.Undoables.
+            // bug workarounds
+            //UndoMenu.ItemsSource = (DataContext as MainWindowViewModel).Manager.Undoables;
+            //RedoMenu.ItemsSource = (DataContext as MainWindowViewModel).Manager.Redoables;
+        }
+
+        private void UndoMenu_OnClick(object sender, RoutedEventArgs e)
+        {
+            UndoMenu.IsSubmenuOpen = true;
         }
     }
 }
