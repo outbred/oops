@@ -201,7 +201,7 @@ namespace DURF.Collections
                     if (index > (_collection.Count - 1))
                     {
                         _collection.Add(item);
-                        indexAdded = Count; 
+                        indexAdded = Count - 1; 
                     }
                     else
                     {
@@ -690,6 +690,7 @@ namespace DURF.Collections
                             this.OnPropertyChanged(nameof(Count));
                         this.OnPropertyChanged(@"Item[]");
                         CollectionChanged?.Invoke(this, e);
+                        Debug.WriteLine($"fire collectionchanged");
                     }
                     catch (Exception ex)
                     {

@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using DURF.Collections;
+
 #pragma warning disable 1998
 
 namespace DURF.Demo
@@ -13,6 +16,11 @@ namespace DURF.Demo
         private Scope _scope;
         private int _scopeNum = 1;
         private string ScopeName => $"Address Changes {_scopeNum}";
+
+        public MainWindowViewModel()
+        {
+            Items = new TrackableCollection<string>();
+        }
 
         public string FirstName
         {
@@ -49,6 +57,36 @@ namespace DURF.Demo
             get => Get<string>();
             set => Set(value);
         }
+
+        public TrackableCollection<string> Items
+        {
+            get => Get<TrackableCollection<string>>();
+            set => Set(value);
+        }
+
+        public ICommand AddItem => new AsyncCommand(async () => Items.Add(Guid.NewGuid().ToString()));
+        public ICommand RemoveItem => new AsyncCommand(async () =>
+        {
+            if (Items.Any())
+                Items.RemoveAt(Items.Count - 1);
+        });
+
+        private bool _threadedDemo;
+
+        public bool ThreadedDemo
+        {
+            get => _threadedDemo;
+            set
+            {
+                if (_threadedDemo == value)
+                    return;
+
+                _threadedDemo = value;
+                RaisePropertyChanged();
+            }
+        }
+
+        public ICommand InThreadedDemo => new AsyncCommand(async () => ThreadedDemo = true);
 
         #region Overrides of TrackableViewModel
 

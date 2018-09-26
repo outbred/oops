@@ -8,7 +8,7 @@ namespace DURF
 {
     public class AsyncCommand : AsyncCommand<object>
     {
-        public AsyncCommand(Func<Task> execute, Func<bool> canExecute) : base((o) => execute(), (o) => canExecute())
+        public AsyncCommand(Func<Task> execute, Func<bool> canExecute = null) : base((o) => execute(), (o) => canExecute?.Invoke() ?? true)
         {
         }
     }
@@ -61,18 +61,19 @@ namespace DURF
         /// <param name="parameter">Data used by the command.</param>
         public async void Execute(object parameter = null)
         {
-            await this.ExecuteAsync((T)parameter);
+            await this.ExecuteAsync(parameter == null ? default(T) : (T)parameter);
         }
 
         private bool _running = false;
         /// <summary>Asynchronously executes the command.</summary>
         /// <param name="parameter">Data used by the command.</param>
-        public async System.Threading.Tasks.Task ExecuteAsync(T parameter)
+        public async Task ExecuteAsync(T parameter)
         {
             var task = this.ExecuteFunc(parameter);
             _running = true;
             RaiseCanExecuteChanged();
-            await task;
+            if(task != null)
+                await task;
             _running = false;
             RaiseCanExecuteChanged();
         }

@@ -50,6 +50,7 @@ namespace URF
 
             (vm.Manager.Redoables as INotifyCollectionChanged).CollectionChanged += (s, e) =>
             {
+
                 RedoMenu.Items.Clear();
                 var idx = 1;
                 foreach (var item in vm.Manager.Redoables.GetEnumerable())
@@ -64,16 +65,27 @@ namespace URF
                     RedoMenu.Items.Add(menu);
                 }
             };
-
-            //vm.Manager.Undoables.
-            // bug workarounds
-            //UndoMenu.ItemsSource = (DataContext as MainWindowViewModel).Manager.Undoables;
-            //RedoMenu.ItemsSource = (DataContext as MainWindowViewModel).Manager.Redoables;
         }
 
-        private void UndoMenu_OnClick(object sender, RoutedEventArgs e)
+        private void OnSimpleClick(object sender, RoutedEventArgs e)
         {
-            UndoMenu.IsSubmenuOpen = true;
+            Intro.Visibility = Visibility.Collapsed;
+            Simple.Visibility = Visibility.Visible;
+        }
+
+        private void OnThreadedClick(object sender, RoutedEventArgs e)
+        {
+            // todo
+            Intro.Visibility = Visibility.Collapsed;
+            Simple.Visibility = Visibility.Visible;
+        }
+
+        private void OnBackClick(object sender, RoutedEventArgs e)
+        {
+            Intro.Visibility = Visibility.Visible;
+            Simple.Visibility = Visibility.Collapsed;
+            var vm = DataContext as MainWindowViewModel;
+            vm.ThreadedDemo = false;
         }
     }
 }
