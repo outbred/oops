@@ -100,7 +100,7 @@ namespace DURF
         {
             if (ReferenceEquals(_current, this) && _current._scopeName == scopeName)
             {
-                Debug.WriteLine($"Completed tracking changes for '{scopeName}' with {(this._changes?.Count ?? 0)} changes tracked.");
+                Debug.WriteLine($"Completed tracking changes for '{scopeName}' with {(this._changes?.Count() ?? 0)} changes tracked.");
                 _current = null;
             }
         }
@@ -115,11 +115,11 @@ namespace DURF
             get { return _changes.Select(c => c.Instance).Distinct(); }
         }
 
-        public IList<Change> TrackedChanges => _changes;
+        public IStack<Change> TrackedChanges => _changes;
         public string Name => _scopeName;
 
         /// <summary>
-        /// Undoes all the changes tracked in reverse order
+        /// Undoes all the changes tracked in reverse order; name check in case of nested scope
         /// </summary>
         /// <returns></returns>
         public async Task UndoAllChanges(string scopeName)
@@ -141,10 +141,8 @@ namespace DURF
                         return;
                     Debug.WriteLine($"Beginning undo for scope named '{_scopeName}'");
                     foreach (var change in _changes.GetEnumerable()) // in order, from top of 'stack' on down
-                    {
-                        Debug.WriteLine($"Undoing change for property '{change.PropertyName}' in instance of type '{change.Instance.GetType().Name}'");
                         change.OnUndo();
-                    }
+
                     Debug.WriteLine($"Completed undo for scope named '{_scopeName}'");
                     _changes = null;
                 }

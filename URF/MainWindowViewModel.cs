@@ -66,46 +66,33 @@ namespace DURF.Demo
 
         #endregion
 
-        public ICommand CommitChanges
+        public AsyncCommand CommitChanges => new AsyncCommand(async (_, t) =>
+        {
+            _scope.Dispose();
+            _scope = null;
+        }, _ => _scope != null);
+
+        public AsyncCommand Track
         {
             get
             {
                 return new AsyncCommand(async (_, t) =>
                 {
-                    _scope.Dispose();
+                    if (_scope != null)
+                        return;
                     _scope = new Scope("Address");
-                });
+                }, _ => _scope == null);
             }
         }
 
-        public ICommand Undo
+        public AsyncCommand Undo => new AsyncCommand(async (_, t) =>
         {
-            get
-            {
-                return new AsyncCommand(async (_, t) =>
-                {
-                    if (ScopeManager.Instance.Undoables.TryPop(out var scope))
-                    {
-                        using(new Scope("Address Redo"))
-                            await scope.UndoAllChanges(scope.Name);
-                    }
-                });
-            }
-        }
+            await ScopeManager.Instance.UndoLast();
+        }, _ => ScopeManager.Instance.Undoables.Any());
 
-        public ICommand Redo
+        public AsyncCommand Redo => new AsyncCommand(async (_, t) =>
         {
-            get
-            {
-                return new AsyncCommand(async (_, t) =>
-                {
-                    if (ScopeManager.Instance.Redoables.TryPop(out var scope))
-                    {
-                        using (new Scope("Address Undo"))
-                            await scope.UndoAllChanges(scope.Name);
-                    }
-                });
-            }
-        }
+            await ScopeManager.Instance.RedoLast();
+        }, _ => ScopeManager.Instance.Redoables.Any());
     }
 }

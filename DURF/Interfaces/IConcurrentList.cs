@@ -8,7 +8,7 @@ namespace DURF.Interfaces
     /// Queue like methods
     /// </summary>
     /// <typeparam name="TType"></typeparam>
-    public interface IQueue<TType> : IList<TType>
+    public interface IQueue<TType> : IEnumerable<TType>
     {
         /// <summary>
         /// Adds an item to a FIFO queue
@@ -46,7 +46,7 @@ namespace DURF.Interfaces
     /// Queue like methods
     /// </summary>
     /// <typeparam name="TType"></typeparam>
-    public interface IStack<TType> : IList<TType>
+    public interface IStack<TType> : IEnumerable<TType>
     {
         /// <summary>
         /// Adds an item to a FILO stack onto the top
@@ -78,6 +78,8 @@ namespace DURF.Interfaces
         /// </summary>
         /// <returns></returns>
         IEnumerable<TType> GetEnumerable();
+
+        void Clear();
     }
 
     public interface IConcurrentList<TType> : IList, IQueue<TType>, IStack<TType>

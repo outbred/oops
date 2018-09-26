@@ -35,7 +35,6 @@ namespace DURF.Collections
         {
 
             _collection = collection == null ? new List<TType>() : new List<TType>(collection.ToList()); // added ToList()  - Joe (08 Apr 2016)
-            Count = _collection.Count;
         }
 
         public TrackableCollection()
@@ -142,7 +141,6 @@ namespace DURF.Collections
 
                     var items = _collection.ToList();
                     _collection.Clear();
-                    Count = 0;
                     if (chgd)
                     {
                         if (TrackChanges)
@@ -179,7 +177,6 @@ namespace DURF.Collections
                     {
                         this.CheckReentrancy();
 
-                        Count--;
                         if (TrackChanges)
                             TrackableScope.Current?.TrackChange(() => this.InsertItem(index, current));
                         this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, current, index));
@@ -211,7 +208,6 @@ namespace DURF.Collections
                         _collection.Insert(index, item);
                         indexAdded = index; 
                     }
-                    Count++;
                     if (TrackChanges)
                         TrackableScope.Current?.TrackChange(() => this.Remove(item));
 
@@ -245,7 +241,6 @@ namespace DURF.Collections
                         _collection.Insert(index, itemInsertedBeforeExisting);
                         indexAdded = index; 
                     }
-                    Count++;
 
                     if (TrackChanges)
                         TrackableScope.Current?.TrackChange(() => this.Remove(existingItem));
@@ -271,7 +266,6 @@ namespace DURF.Collections
                     var idx = _collection.IndexOf(item);
                     if (_collection.Remove(item))
                     {
-                        Count--;
                         if (TrackChanges)
                             TrackableScope.Current?.TrackChange(() => this.InsertItem(idx, item));
                         this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, value, idx));
@@ -361,7 +355,6 @@ namespace DURF.Collections
                     removed = _collection.Remove(item);
                     if (removed)
                     {
-                        Count--;
                         if (TrackChanges)
                             TrackableScope.Current?.TrackChange(() => this.InsertItem(indx, item));
                         this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, item, indx));
@@ -389,7 +382,14 @@ namespace DURF.Collections
         /// <summary>
         /// Only updated within a write-lock, so we should be good to always read from it
         /// </summary>
-        public int Count { get; private set; } = 0;
+        public int Count
+        {
+            get
+            {
+                lock (SyncRoot)
+                    return _collection.Count;
+            }
+        } 
 
         /// <summary>
         /// Gets an object that can be used to synchronize access to the <see cref="T:System.Collections.ICollection"/>.
@@ -561,7 +561,6 @@ namespace DURF.Collections
                     foreach (var item in toAdd)
                     {
                         _collection.Insert(position++, item);
-                        Count++;
                         if (TrackChanges)
                             TrackableScope.Current?.TrackChange(() => this.Remove(item));
                     }
@@ -596,7 +595,6 @@ namespace DURF.Collections
                         {
                             tuples.Add(new Tuple<int, TType>(index, child));
                             _collection.RemoveAt(index);
-                            Count--;
                             anyRemoved = true;
                         }
                         else
@@ -640,7 +638,6 @@ namespace DURF.Collections
 
                     _collection.Add(item);
                     var indexAdded = _collection.Count - 1;
-                    Count++;
 
                     if (TrackChanges)
                         TrackableScope.Current?.TrackChange(() => Remove(item));
@@ -1072,7 +1069,6 @@ namespace DURF.Collections
                 // don't fire collection changed events after deserialization
                 // can cause stackoverflows if listeners are created on this collection during deserialization
                 _collection.AddRange(_itemsDeserialized);
-                Count = _collection.Count;
             }
         }
 
