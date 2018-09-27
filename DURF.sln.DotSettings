@@ -414,4 +414,5 @@ public $DisplayType$ $PropName$ &#xD;
 }</s:String>
 	<s:Boolean x:Key="/Default/UserDictionary/Words/=Redoables/@EntryIndexedValue">True</s:Boolean>
 	<s:Boolean x:Key="/Default/UserDictionary/Words/=Trackable/@EntryIndexedValue">True</s:Boolean>
-	<s:Boolean x:Key="/Default/UserDictionary/Words/=Undoables/@EntryIndexedValue">True</s:Boolean></wpf:ResourceDictionary>
+	<s:Boolean x:Key="/Default/UserDictionary/Words/=Undoables/@EntryIndexedValue">True</s:Boolean>
+	<s:Boolean x:Key="/Default/UserDictionary/Words/=undo_0027s/@EntryIndexedValue">True</s:Boolean></wpf:ResourceDictionary>

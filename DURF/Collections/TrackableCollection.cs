@@ -14,7 +14,7 @@ using DURF.Interfaces;
 namespace DURF.Collections
 {
     /// <summary>
-    /// An ordered collection that ensures it is always on the correct thread for the CollectionChanged event and fire the PropertyChanged event as well (on whatever thread).
+    /// An ordered collection that ensures it is always on the correct thread for the CollectionChanged event and fires the PropertyChanged event as well (on whatever thread).
     /// 
     /// This collection is also thread-safe (concurrency is ok). Merely supply the IDispatcher to utilize this class w/ UI elements (e.g. some binding).
     /// 
@@ -33,12 +33,12 @@ namespace DURF.Collections
     /// IStack<something> q = new TrackableCollection<something>();
     /// 
     /// </summary>
-    /// <typeparam name="TType"></typeparam>
+    /// <typeparam name="TType">Any type that the collection will contain</typeparam>
     [Serializable]
     [DebuggerDisplay(@"Count = {Count}")]
     public class TrackableCollection<TType> : IList<TType>, IList, IReadOnlyList<TType>, IConvertible, ISerializable, INotifyCollectionChanged, INotifyPropertyChanged, IQueue<TType>, IStack<TType>
     {
-        private readonly List<TType> _collection = new List<TType>();
+        private List<TType> _collection = new List<TType>();
 
         public TrackableCollection(IEnumerable<TType> collection) : this()
         {
@@ -77,7 +77,7 @@ namespace DURF.Collections
         {
             if (this._monitor.Busy && this.CollectionChanged != null && this.CollectionChanged.GetInvocationList().Length > 1)
             {
-                // this could be bad... Brent (27 Jan 2016)
+                // this could be bad...but we'll pretend it's not
                 //throw new InvalidOperationException(@"Reentrancy not allowed.");
             }
         }
@@ -112,7 +112,7 @@ namespace DURF.Collections
                      * Handles this scenario:
                      * 
                      * var a = new { "1","2","3","4","5"}
-                     * a.Move(a.IndexOf("2"), a.IndexOf("4"))
+                     * a.Swap(a.IndexOf("2"), a.IndexOf("4"))
                      * 
                      * a.IndexOf("4") before the remove is 3.  After the "2" is removed, the new index should be 2
                      */
@@ -125,7 +125,7 @@ namespace DURF.Collections
                         _collection.Insert(newIndex, oldItem);
 
                     if (TrackChanges)
-                        TrackableScope.Current?.TrackChange(() => { this.Move(newIndex, oldIndex); });
+                        Accumulator.Current?.AddUndo(() => { this.Move(newIndex, oldIndex); });
 
                     this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Move, (object)oldItem, newIndex, oldIndex));
                 }
@@ -153,7 +153,7 @@ namespace DURF.Collections
                     if (chgd)
                     {
                         if (TrackChanges)
-                            TrackableScope.Current?.TrackChange(() =>  this.AddRange(items));
+                            Accumulator.Current?.AddUndo(() =>  this.AddRange(items));
                         this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
                     }
                 }
@@ -176,7 +176,7 @@ namespace DURF.Collections
                 {
                     // during the context switch a couple things could have happened: 
                     // 1. The collection could have been modified (waiting on lock(this) b/c a different Remove/Add call was happening)
-                    // 2. The item at the desired index could have changed (say Move() was happening during our wait on the lock)
+                    // 2. The item at the desired index could have changed (say Swap() was happening during our wait on the lock)
                     if (Count <= index)
                         return;
 
@@ -187,11 +187,43 @@ namespace DURF.Collections
                         this.CheckReentrancy();
 
                         if (TrackChanges)
-                            TrackableScope.Current?.TrackChange(() => this.InsertItem(index, current));
+                            Accumulator.Current?.AddUndo(() => this.InsertItem(index, current));
                         this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, current, index));
                     }
                 }
             });
+        }
+
+        public void RemoveAllInstances(TType item)
+        {
+            PushToUiThreadSync(() =>
+            {
+                lock (SyncRoot)
+                {
+                    int total = 0;
+                    while (_collection.Remove(item)) 
+                        total++;
+
+                    if (total > 0)
+                        OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+                }
+            });
+        }
+
+        public int RemoveAndGetIndex(TType item)
+        {
+            var idx = -1;
+            PushToUiThreadSync(() =>
+            {
+                lock (SyncRoot)
+                {
+                    idx = IndexOf(item);
+                    if (idx < 0)
+                        return;
+                    RemoveAt(idx);
+                }
+            });
+            return idx;
         }
 
         /// <summary>
@@ -218,7 +250,7 @@ namespace DURF.Collections
                         indexAdded = index; 
                     }
                     if (TrackChanges)
-                        TrackableScope.Current?.TrackChange(() => this.Remove(item));
+                        Accumulator.Current?.AddUndo(() => this.Remove(item));
 
                     this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, item, indexAdded));
                 }
@@ -252,7 +284,7 @@ namespace DURF.Collections
                     }
 
                     if (TrackChanges)
-                        TrackableScope.Current?.TrackChange(() => this.Remove(existingItem));
+                        Accumulator.Current?.AddUndo(() => this.Remove(existingItem));
 
                     this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, itemInsertedBeforeExisting, indexAdded));
                 }
@@ -276,7 +308,7 @@ namespace DURF.Collections
                     if (_collection.Remove(item))
                     {
                         if (TrackChanges)
-                            TrackableScope.Current?.TrackChange(() => this.InsertItem(idx, item));
+                            Accumulator.Current?.AddUndo(() => this.InsertItem(idx, item));
                         this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, value, idx));
                     }
                 }
@@ -365,12 +397,40 @@ namespace DURF.Collections
                     if (removed)
                     {
                         if (TrackChanges)
-                            TrackableScope.Current?.TrackChange(() => this.InsertItem(indx, item));
+                            Accumulator.Current?.AddUndo(() => this.InsertItem(indx, item));
                         this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, item, indx));
                     }
                 }
             });
             return removed;
+        }
+
+        public int Remove(IEnumerable<TType> items)
+        {
+            int total = 0;
+            PushToUiThreadSync(() =>
+            {
+                lock (SyncRoot)
+                {
+                    var count = Count;
+                    foreach (var item in items)
+                    {
+                        var indx = _collection.IndexOf(item);
+                        var removed = _collection.Remove(item);
+                        if (removed)
+                        {
+                            if (TrackChanges)
+                                Accumulator.Current?.AddUndo(() => this.InsertItem(indx, item));
+                            total++;
+                        }
+                    }
+
+                    if(Count != count)
+                        this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+
+                }
+            });
+            return total;
         }
 
         /// <summary>
@@ -439,7 +499,7 @@ namespace DURF.Collections
 
                     _collection[index] = item;
                     if (TrackChanges)
-                        TrackableScope.Current?.TrackChange(() => this.SetItem(index, current));
+                        Accumulator.Current?.AddUndo(() => this.SetItem(index, current));
                     this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Replace, item, current, index));
                 }
             });
@@ -545,6 +605,13 @@ namespace DURF.Collections
             return index;
         }
 
+
+        public int ReverseIndexOf(TType item)
+        {
+            lock (SyncRoot)
+                return ConcurrentList<TType>.ReverseIndexOf(_collection, item);
+        }
+
         /// <summary>
         /// Inserts an item to the <see cref="T:System.Collections.Generic.IList`1"/> at the specified index.
         /// </summary>
@@ -571,7 +638,7 @@ namespace DURF.Collections
                     {
                         _collection.Insert(position++, item);
                         if (TrackChanges)
-                            TrackableScope.Current?.TrackChange(() => this.Remove(item));
+                            Accumulator.Current?.AddUndo(() => this.Remove(item));
                     }
 
                     this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
@@ -612,7 +679,7 @@ namespace DURF.Collections
 
                     if (TrackChanges && anyRemoved)
                     {
-                        TrackableScope.Current?.TrackChange(() =>
+                        Accumulator.Current?.AddUndo(() =>
                         {
                             foreach (var tuple in tuples)
                                 this.InsertItem(tuple.Item1, tuple.Item2);
@@ -621,6 +688,44 @@ namespace DURF.Collections
 
                     if (anyRemoved)
                         this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+                }
+            });
+        }
+
+        /// <summary>
+        /// Replace all instances of existing with new in the list (inside a lock)
+        /// </summary>
+        /// <returns>The number of elements replaced.</returns>
+        public int ReplaceAll(TType existingItem, TType newItem)
+        {
+            var total = 0;
+            PushToUiThreadSync(() =>
+            {
+                lock (SyncRoot)
+                {
+                    for (var index = 0; index < _collection.Count; index++)
+                    {
+                        var item = _collection[index];
+                        if ((item == null && existingItem == null) || item?.Equals(existingItem) == true)
+                        {
+                            _collection[index] = newItem;
+                            total++;
+                        }
+                    }
+
+                }
+            });
+            return total;
+        }
+
+        public void ReplaceWith(IEnumerable<TType> items)
+        {
+            PushToUiThreadSync(() =>
+            {
+                lock (SyncRoot)
+                {
+                    _collection = items.ToList();
+                    this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
                 }
             });
         }
@@ -649,10 +754,28 @@ namespace DURF.Collections
                     var indexAdded = _collection.Count - 1;
 
                     if (TrackChanges)
-                        TrackableScope.Current?.TrackChange(() => Remove(item));
+                        Accumulator.Current?.AddUndo(() => Remove(item));
                     this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, item, indexAdded));
                 }
             });
+        }
+
+        /// <summary>
+        /// Same as Add except returns the index and locks around the checking of size and adding so it is safe.
+        /// </summary>
+        /// <returns>Index of the newly added item</returns>
+        public int AddAndGetIndex(TType item)
+        {
+            int idx = -1;
+            PushToUiThreadSync(() =>
+            {
+                lock (SyncRoot)
+                {
+                    idx = _collection.Count;
+                    Add(item);
+                }
+            });
+            return idx;
         }
 
         #endregion

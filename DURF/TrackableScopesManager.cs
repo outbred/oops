@@ -8,38 +8,38 @@ using DURF.Interfaces;
 
 namespace DURF
 {
-    public class ScopeManager : TrackableViewModel
+    public class TrackableScopesManager : TrackableViewModel
     {
         protected override bool TrackChanges => false;
 
-        private TrackableCollection<TrackableScope> _undoables = new TrackableCollection<TrackableScope>();
-        private TrackableCollection<TrackableScope> _redoables = new TrackableCollection<TrackableScope>();
+        private TrackableCollection<Accumulator> _undoables = new TrackableCollection<Accumulator>();
+        private TrackableCollection<Accumulator> _redoables = new TrackableCollection<Accumulator>();
 
         /// <summary>
         /// Readonly view into Undoables collection.  To add to the Undoables, use the Add() method
         /// </summary>
-        public IReadOnlyCollection<TrackableScope> Undoables => _undoables;
+        public IReadOnlyCollection<Accumulator> Undoables => _undoables;
 
         /// <summary>
         /// Readonly view into Redoables collection.  Only manipulated internally
         /// </summary>
-        public IReadOnlyCollection<TrackableScope> Redoables => _redoables;
+        public IReadOnlyCollection<Accumulator> Redoables => _redoables;
 
-        private static ScopeManager _instance = null;
+        private static TrackableScopesManager _instance = null;
 
         /// <summary>
         /// Singleton instance, if that's your flavor.  If using injection (preferred), can use this as well depending on if you feed the injection container this instance.
         /// </summary>
-        public static ScopeManager Instance
+        public static TrackableScopesManager Instance
         {
             get
             {
-                Interlocked.CompareExchange(ref _instance, new ScopeManager(), null);
+                Interlocked.CompareExchange(ref _instance, new TrackableScopesManager(), null);
                 return _instance;
             }
         }
 
-        public void Add(TrackableScope scope, ScopeState state)
+        public void Add(Accumulator scope, ScopeState state)
         {
             switch (state)
             {
@@ -65,18 +65,18 @@ namespace DURF
             _redoables.Clear();
         }
 
-        private AsyncCommand<TrackableScope> _undo = null;
+        private AsyncCommand<Accumulator> _undo = null;
 
         /// <summary>
         /// Performs an Undo up to and including the scope supplied.  If none supplied, undoes the last scope
         /// </summary>
-        public AsyncCommand<TrackableScope> Undo
+        public AsyncCommand<Accumulator> Undo
         {
             get
             {
                 if (_undo == null)
                 {
-                    _undo = new AsyncCommand<TrackableScope>(async item =>
+                    _undo = new AsyncCommand<Accumulator>(async item =>
                         {
                             if (item == null)
                                 await UndoLast();
@@ -84,8 +84,8 @@ namespace DURF
                             {
                                 while (_undoables.TryPop(out var scope))
                                 {
-                                    using (new Scope(scope.Name, ScopeState.Redo))
-                                        await scope.UndoAllChanges(scope.Name);
+                                    using (new TrackableScope(scope.Name, ScopeState.Redo))
+                                        await scope.UndoAll(scope.Name);
 
                                     if (scope == item)
                                         break;
@@ -99,18 +99,18 @@ namespace DURF
             }
         }
 
-        private AsyncCommand<TrackableScope> _redo = null;
+        private AsyncCommand<Accumulator> _redo = null;
 
         /// <summary>
         /// Performs a Redo up to and including the scope supplied.  If none supplied, redoes the last scope
         /// </summary>
-        public AsyncCommand<TrackableScope> Redo
+        public AsyncCommand<Accumulator> Redo
         {
             get
             {
                 if (_redo == null)
                 {
-                    _redo = new AsyncCommand<TrackableScope>(async item =>
+                    _redo = new AsyncCommand<Accumulator>(async item =>
                         {
                             if (item == null)
                                 await RedoLast();
@@ -118,8 +118,8 @@ namespace DURF
                             {
                                 while (_redoables.TryPop(out var scope))
                                 {
-                                    using (new Scope(scope.Name, ScopeState.Undo))
-                                        await scope.UndoAllChanges(scope.Name);
+                                    using (new TrackableScope(scope.Name, ScopeState.Undo))
+                                        await scope.UndoAll(scope.Name);
 
                                     if (scope == item)
                                         break;
@@ -132,21 +132,29 @@ namespace DURF
             }
         }
 
+        /// <summary>
+        /// Undoes the scope on the top of the stack, pushing the new scope to the redo stack
+        /// </summary>
+        /// <returns></returns>
         public async Task UndoLast()
         {
             if (_undoables.TryPop(out var scope))
             {
-                using (new Scope(scope.Name, ScopeState.Redo))
-                    await scope.UndoAllChanges(scope.Name);
+                using (new TrackableScope(scope.Name, ScopeState.Redo))
+                    await scope.UndoAll(scope.Name);
             }
         }
 
+        /// <summary>
+        /// Redoes the scope on the top of the stack, pushing the new scope to the undo stack
+        /// </summary>
+        /// <returns></returns>
         public async Task RedoLast()
         {
             if (_redoables.TryPop(out var scope))
             {
-                using (new Scope(scope.Name, ScopeState.Undo))
-                    await scope.UndoAllChanges(scope.Name);
+                using (new TrackableScope(scope.Name, ScopeState.Undo))
+                    await scope.UndoAll(scope.Name);
             }
         }
     }

@@ -13,7 +13,7 @@ namespace DURF.Demo
 {
     public class MainWindowViewModel : TrackableViewModel
     {
-        private Scope _scope;
+        private TrackableScope _trackableScope;
         private int _scopeNum = 1;
         private string ScopeName => $"Address Changes {_scopeNum}";
 
@@ -95,7 +95,7 @@ namespace DURF.Demo
         protected override void OnLoaded()
         {
             base.OnLoaded();
-            _scope = new Scope(ScopeName);
+            _trackableScope = new TrackableScope(ScopeName);
             RaisePropertyChanged(nameof(Current));
         }
 
@@ -103,7 +103,7 @@ namespace DURF.Demo
         protected override void OnUnloaded()
         {
             base.OnUnloaded();
-            _scope.Dispose();
+            _trackableScope.Dispose();
         }
 
         #endregion
@@ -117,12 +117,12 @@ namespace DURF.Demo
                 {
                     _commitChanges = new AsyncCommand(async () =>
                     {
-                        _scope.Dispose();
-                        _scope = null;
+                        _trackableScope.Dispose();
+                        _trackableScope = null;
                         _scopeNum++;
                         RaisePropertyChanged(nameof(Current));
                         _track.RaiseCanExecuteChanged();
-                    }, () => _scope != null);
+                    }, () => _trackableScope != null);
                 }
 
                 return _commitChanges;
@@ -139,20 +139,20 @@ namespace DURF.Demo
                 {
                     _track = new AsyncCommand(async () =>
                         {
-                            if (_scope != null)
+                            if (_trackableScope != null)
                                 return;
-                            _scope = new Scope(ScopeName);
+                            _trackableScope = new TrackableScope(ScopeName);
                             RaisePropertyChanged(nameof(Current));
                             _commitChanges.RaiseCanExecuteChanged();
-                        }, () => _scope == null);
+                        }, () => _trackableScope == null);
                 }
 
                 return _track;
             }
         }
 
-        public ScopeManager Manager => ScopeManager.Instance;
+        public TrackableScopesManager Manager => TrackableScopesManager.Instance;
 
-        public TrackableScope Current => TrackableScope.Current;
+        public Accumulator Current => Accumulator.Current;
     }
 }

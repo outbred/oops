@@ -38,14 +38,14 @@ namespace URF
                 UndoMenu.Items.Clear();
 
                 var idx = 1;
-                foreach (var item in (vm.Manager.Undoables as IStack<TrackableScope>).GetEnumerable())
+                foreach (var item in (vm.Manager.Undoables as IStack<Accumulator>).GetEnumerable())
                 {
                     var menu = new MenuItem()
                         {
                             DataContext = item,
                             Command = vm.Manager.Undo,
                             CommandParameter = item,
-                            Header = $"({idx++}) Undo '{item.Name}' with {item.TrackedChanges.Count} changes"
+                            Header = $"({idx++}) Undo '{item.Name}' with {item.Records.Count} changes"
                         };
                     UndoMenu.Items.Add(menu);
                 }
@@ -56,14 +56,14 @@ namespace URF
 
                 RedoMenu.Items.Clear();
                 var idx = 1;
-                foreach (var item in (vm.Manager.Redoables as IStack<TrackableScope>).GetEnumerable())
+                foreach (var item in (vm.Manager.Redoables as IStack<Accumulator>).GetEnumerable())
                 {
                     var menu = new MenuItem()
                         {
                             DataContext = item,
                             Command = vm.Manager.Redo,
                             CommandParameter = item,
-                            Header = $"({idx++}) Redo '{item.Name}' with {item.TrackedChanges.Count} changes"
+                            Header = $"({idx++}) Redo '{item.Name}' with {item.Records.Count} changes"
                         };
                     RedoMenu.Items.Add(menu);
                 }

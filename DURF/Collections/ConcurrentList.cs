@@ -115,7 +115,7 @@ namespace DURF.Collections
             lock(_syncRoot)
                 _internal.Add(item);
 
-            OnPropertyChanged(nameof(Count));
+            OnPropertyChanged();
         }
 
         /// <summary>
@@ -132,7 +132,7 @@ namespace DURF.Collections
                 if (_internal.Contains(item))
                     return false;
                 _internal.Add(item);
-                OnPropertyChanged(nameof(Count));
+                OnPropertyChanged();
                 return true;
             }
         }
@@ -147,7 +147,7 @@ namespace DURF.Collections
             {
                 var idx = _internal.Count;
                 _internal.Add(item);
-                OnPropertyChanged(nameof(Count));
+                OnPropertyChanged();
                 return idx;
             }
         }
@@ -170,7 +170,7 @@ namespace DURF.Collections
         {
             lock(_syncRoot)
                 _internal.Clear();
-            OnPropertyChanged(nameof(Count));
+            OnPropertyChanged();
         }
 
         int IList.IndexOf(object value)
@@ -211,7 +211,7 @@ namespace DURF.Collections
             bool result = false;
             lock(_syncRoot)
                 result = _internal.Remove(item);
-            OnPropertyChanged(nameof(Count));
+            OnPropertyChanged();
             return result;
         }
 
@@ -224,7 +224,7 @@ namespace DURF.Collections
             int result = 0;
             lock(_syncRoot)
                 result = items.Count(item => _internal.Remove(item));
-            OnPropertyChanged(nameof(Count));
+            OnPropertyChanged();
             return result;
         }
 
@@ -258,7 +258,7 @@ namespace DURF.Collections
                 if (idx < 0)
                     return idx;
                 _internal.RemoveAt(idx);
-                OnPropertyChanged(nameof(Count));
+                OnPropertyChanged();
                 return idx;
             }
         }
@@ -297,7 +297,7 @@ namespace DURF.Collections
         }
 
         /// <summary>
-        /// Find in backwards order for performance
+        /// Find in backwards order for targeted performance cases (you know the index is usually at the end)
         /// Static so we can use in other classes
         /// </summary>
         public static int ReverseIndexOf(IList<TType> list, TType item)
@@ -324,35 +324,35 @@ namespace DURF.Collections
                 else
                     _internal.Add(item);
             }
-            OnPropertyChanged(nameof(Count));
+            OnPropertyChanged();
         }
 
         public void RemoveAt(int index)
         {
             lock(_syncRoot)
                 _internal.RemoveAt(index);
-            OnPropertyChanged(nameof(Count));
+            OnPropertyChanged();
         }
 
         public void AddRange(IEnumerable<TType> source)
         {
             lock(_syncRoot)
                 _internal.AddRange(source);
-            OnPropertyChanged(nameof(Count));
+            OnPropertyChanged();
         }
 
         public void RemoveAllInstances(TType item)
         {
             lock(_syncRoot)
                 while (_internal.Remove(item)) { }
-            OnPropertyChanged(nameof(Count));
+            OnPropertyChanged();
         }
 
         /// <summary>
         /// Safely transfer all elements from a list to this one.
         /// </summary>
         /// <param name="source">Source list that will be transferred (and emptied)</param>
-        public void TransferElements(IList<TType> source)
+        public void Transfer(IList<TType> source)
         {
             lock(_syncRoot)
             {
@@ -360,14 +360,14 @@ namespace DURF.Collections
                 _internal.AddRange(sourceList);
                 sourceList.Clear();
             }
-            OnPropertyChanged(nameof(Count));
+            OnPropertyChanged();
         }
 
         /// <summary>
         /// Pull out all elements of the list.  Done efficiently so no copying is
         /// needed - just transfer the internal list and reset it with a new one.
         /// </summary>
-        public List<TType> ExtractElements()
+        public List<TType> ExtractAll()
         {
             List<TType> tempList = null;
             lock(_syncRoot)
@@ -375,7 +375,7 @@ namespace DURF.Collections
                 tempList = _internal;
                 _internal = new List<TType>();
             }
-            OnPropertyChanged(nameof(Count));
+            OnPropertyChanged();
             return tempList;
         }
 
@@ -423,6 +423,11 @@ namespace DURF.Collections
                 return _internal[0];
         }
 
+        /// <summary>
+        /// Gets the last item in the collection
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="ArgumentOutOfRangeException">If the list is empty</exception>
         public TType Last()
         {
             lock (_syncRoot)
@@ -434,7 +439,7 @@ namespace DURF.Collections
         /// Performed in a single function so we can maintain the lock on the internal list.
         /// </summary>
         /// <returns>True if item ends up at the requested index.  False if not.</returns>
-        public bool Move(TType item, int desiredIndex)
+        public bool Swap(TType item, int desiredIndex)
         {
             lock(_syncRoot)
             {
@@ -479,7 +484,7 @@ namespace DURF.Collections
 
                 var item = _internal[0];
                 _internal.RemoveAt(0);
-                OnPropertyChanged(nameof(Count));
+                OnPropertyChanged();
                 return item;
             }
         }
@@ -495,15 +500,9 @@ namespace DURF.Collections
 
                 item = _internal[0];
                 _internal.RemoveAt(0);
-                OnPropertyChanged(nameof(Count));
+                OnPropertyChanged();
                 return true;
             }
-        }
-
-        /// <inheritdoc />
-        bool IQueue<TType>.Any()
-        {
-            return Count > 0;
         }
 
         IEnumerable<TType> IQueue<TType>.GetEnumerable()
@@ -551,12 +550,6 @@ namespace DURF.Collections
             }
         }
 
-        /// <inheritdoc />
-        bool IStack<TType>.Any()
-        {
-            return Count > 0;
-        }
-
         IEnumerable<TType> IStack<TType>.GetEnumerable()
         {
             lock(_syncRoot)
@@ -567,9 +560,10 @@ namespace DURF.Collections
 
         public event PropertyChangedEventHandler PropertyChanged;
 
-        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        protected virtual void OnPropertyChanged()
         {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Count)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(@"Items[]"));
         }
     }
 }

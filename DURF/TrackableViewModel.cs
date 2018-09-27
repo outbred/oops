@@ -94,7 +94,7 @@ namespace DURF
         protected virtual bool OnPropertyChanging(string name, object currentValue, bool raiseEvent)
         {
             if(TrackChanges)
-                TrackableScope.Current?.TrackChange(() => Set(currentValue, name, raiseEvent));
+                Accumulator.Current?.AddUndo(() => Set(currentValue, name, raiseEvent));
 
             return true;
         }

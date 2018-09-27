@@ -4,7 +4,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace DURF.Tests
 {
     [TestClass]
-    public class UnitTest1
+    public class ScopeTests
     {
         [TestMethod]
         public void TestMethod1()

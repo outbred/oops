@@ -54,7 +54,7 @@
                     <MenuItem Command="{Binding CommitChanges}" >
                         <MenuItem.Header>
                             <TextBlock>
-                            <Run Text="Commit " /><Run Text="{Binding Current.TrackedChanges.Count, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" /><Run Text=" changes" />
+                            <Run Text="Commit " /><Run Text="{Binding Current.Records.Count, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}" /><Run Text=" changes" />
                             </TextBlock>
                         </MenuItem.Header>
                     </MenuItem>

@@ -122,13 +122,13 @@ namespace DURF.Interfaces
         /// Locks both sides throughout the copy and the clear.
         /// </summary>
         /// <param name="source">Source list that will be transferred (and emptied)</param>
-        void TransferElements(IList<TType> source);
+        void Transfer(IList<TType> source);
 
         /// <summary>
         /// Pull out all elements of the list.  Done efficiently so no copying is
         /// needed - just transfer the internal list and reset it with a new one.
         /// </summary>
-        List<TType> ExtractElements();
+        List<TType> ExtractAll();
 
         /// <summary>
         /// Same as LINQ extension method, but thread safe.
@@ -157,6 +157,6 @@ namespace DURF.Interfaces
         /// Performed in a single function so we can maintain the lock on the internal list.
         /// </summary>
         /// <returns>True if item ends up at the requested index.  False if not.</returns>
-        bool Move(TType item, int desiredIndex);
+        bool Swap(TType item, int desiredIndex);
     }
 }
