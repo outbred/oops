@@ -2,6 +2,13 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
+    <Authors>Brent Bulla</Authors>
+    <Product>DURF - Do, Undo, Redo Framework</Product>
+    <Description>Provides a general purpose do,undo,redo framework that can be used for any user-driven application that requires change tracking</Description>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
   </PropertyGroup>
 
 </Project>

@@ -25,11 +25,7 @@ namespace DURF
         /// <summary>
         /// Occurs when changes occur that affect whether or not the command can be executed.
         /// </summary>
-        public event EventHandler CanExecuteChanged
-        {
-            add => PlatformImplementation.OnCanExecuteSubscribed?.Invoke(value);
-            remove => PlatformImplementation.OnCanExecuteUnsubscribed?.Invoke(value);
-        }
+        public event EventHandler CanExecuteChanged;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="T:WpfAsyncPack.Command.AsyncCommand`1" /> class.
@@ -96,9 +92,9 @@ namespace DURF
         /// <summary>
         /// Raises the <see cref="E:WpfAsyncPack.Command.AsyncCommand`1.CanExecuteChanged" /> event notifying the command state was changed.
         /// </summary>
-        protected static void RaiseCanExecuteChanged()
+        public void RaiseCanExecuteChanged()
         {
-            PlatformImplementation.ToRaiseCanExecuteChanged?.Invoke();
+            CanExecuteChanged?.Invoke(this, new EventArgs());
         }
     }
 }

@@ -65,6 +65,7 @@ namespace DURF.Demo
         }
 
         public ICommand AddItem => new AsyncCommand(async () => Items.Add(Guid.NewGuid().ToString()));
+
         public ICommand RemoveItem => new AsyncCommand(async () =>
         {
             if (Items.Any())
@@ -107,25 +108,46 @@ namespace DURF.Demo
 
         #endregion
 
-        public AsyncCommand CommitChanges => new AsyncCommand(async () =>
+        private AsyncCommand _commitChanges = null;
+        public AsyncCommand CommitChanges
         {
-            _scope.Dispose();
-            _scope = null;
-            _scopeNum++;
-            RaisePropertyChanged(nameof(Current));
-        }, () => _scope != null);
+            get
+            {
+                if (_commitChanges == null)
+                {
+                    _commitChanges = new AsyncCommand(async () =>
+                    {
+                        _scope.Dispose();
+                        _scope = null;
+                        _scopeNum++;
+                        RaisePropertyChanged(nameof(Current));
+                        _track.RaiseCanExecuteChanged();
+                    }, () => _scope != null);
+                }
+
+                return _commitChanges;
+            }
+        }
+
+        private AsyncCommand _track = null;
 
         public AsyncCommand Track
         {
             get
             {
-                return new AsyncCommand(async () =>
+                if (_track == null)
                 {
-                    if (_scope != null)
-                        return;
-                    _scope = new Scope(ScopeName);
-                    RaisePropertyChanged(nameof(Current));
-                }, () => _scope == null);
+                    _track = new AsyncCommand(async () =>
+                        {
+                            if (_scope != null)
+                                return;
+                            _scope = new Scope(ScopeName);
+                            RaisePropertyChanged(nameof(Current));
+                            _commitChanges.RaiseCanExecuteChanged();
+                        }, () => _scope == null);
+                }
+
+                return _track;
             }
         }
 

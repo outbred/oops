@@ -27,9 +27,6 @@ namespace URF
             // current dispatcher is the UI thread for the App
             WpfDispatcher.Initialize(Dispatcher.CurrentDispatcher);
             PlatformImplementation.Dispatcher = new WpfDispatcher();
-            PlatformImplementation.ToRaiseCanExecuteChanged = CommandManager.InvalidateRequerySuggested;
-            PlatformImplementation.OnCanExecuteSubscribed = h => CommandManager.RequerySuggested += h;
-            PlatformImplementation.OnCanExecuteUnsubscribed = h => CommandManager.RequerySuggested -= h;
         }
 
         #endregion

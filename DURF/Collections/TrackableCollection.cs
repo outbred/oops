@@ -14,15 +14,24 @@ using DURF.Interfaces;
 namespace DURF.Collections
 {
     /// <summary>
-    /// An ordered collection that ensures it is always on the correct thread for collectionchanged and propertychanged events.
+    /// An ordered collection that ensures it is always on the correct thread for the CollectionChanged event and fire the PropertyChanged event as well (on whatever thread).
     /// 
-    /// This collection is also thread-safe (concurrency is ok). Merely supply the IDispatcher to utilize this class w/ UI elements.
+    /// This collection is also thread-safe (concurrency is ok). Merely supply the IDispatcher to utilize this class w/ UI elements (e.g. some binding).
     /// 
     /// All methods are synchronous in nature because most UI controls expect the bound collection to remain unchanged throughout
     /// the CollectionChanged event cycle.
     ///
     /// This collection can act like a List<typeparam name="TType"></typeparam>, a Queue<typeparam name="TType"></typeparam>, or a Stack<typeparam name="TType"></typeparam>
     /// depending on your desired behavior.
+    ///
+    /// The Queue and Stack functionality are available w/o explicit casting, so buyer beware!  If you use it as a Q, it's safer to cast it as a Q, like this:
+    ///
+    /// IQueue<something> q = new TrackableCollection<something>();
+    ///
+    /// Likewise, for a stack:
+    /// 
+    /// IStack<something> q = new TrackableCollection<something>();
+    /// 
     /// </summary>
     /// <typeparam name="TType"></typeparam>
     [Serializable]
@@ -1093,13 +1102,13 @@ namespace DURF.Collections
         #region IQueue<TType>
 
         /// <inheritdoc />
-        void IQueue<TType>.Enqueue(TType item)
+        public void Enqueue(TType item)
         {
             Add(item);
         }
 
         /// <inheritdoc />
-        TType IQueue<TType>.Dequeue()
+        public TType Dequeue()
         {
             if (!((IQueue<TType>)this).TryDequeue(out var item))
             {
@@ -1110,7 +1119,7 @@ namespace DURF.Collections
         }
 
         /// <inheritdoc />
-        bool IQueue<TType>.TryDequeue(out TType item)
+        public bool TryDequeue(out TType item)
         {
             item = default(TType);
             lock (SyncRoot)
@@ -1124,30 +1133,18 @@ namespace DURF.Collections
             }
         }
 
-        /// <inheritdoc />
-        bool IQueue<TType>.Any()
-        {
-            return Count > 0;
-        }
-
-        IEnumerable<TType> IQueue<TType>.GetEnumerable()
-        {
-            lock (SyncRoot)
-                return this.ToList();
-        }
-
         #endregion
 
         #region IStack<TType>
 
         /// <inheritdoc />
-        void IStack<TType>.Push(TType item)
+        public void Push(TType item)
         {
             Insert(0, item);
         }
 
         /// <inheritdoc />
-        TType IStack<TType>.Pop()
+        public TType Pop()
         {
             if (!((IStack<TType>)this).TryPop(out var item))
             {
@@ -1158,7 +1155,7 @@ namespace DURF.Collections
         }
 
         /// <inheritdoc />
-        bool IStack<TType>.TryPop(out TType item)
+        public bool TryPop(out TType item)
         {
             item = default(TType);
             lock (SyncRoot)
@@ -1172,19 +1169,17 @@ namespace DURF.Collections
             }
         }
 
-        /// <inheritdoc />
-        bool IStack<TType>.Any()
+        #endregion
+
+        public bool Any()
         {
             return Count > 0;
         }
 
-        IEnumerable<TType> IStack<TType>.GetEnumerable()
+        public IEnumerable<TType> GetEnumerable()
         {
             lock (SyncRoot)
                 return this.ToList();
         }
-
-
-        #endregion
     }
 }

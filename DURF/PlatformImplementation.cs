@@ -7,18 +7,9 @@ namespace DURF
 {
     public static class PlatformImplementation
     {
+        /// <summary>
+        /// Platform-specific implementation of the Ui thread dispatcher
+        /// </summary>
         public static IDispatcher Dispatcher { get; set; }
-
-
-        /// <summary>
-        /// Set per platform
-        /// </summary>
-        public static Action ToRaiseCanExecuteChanged { get; set; }
-
-        /// <summary>
-        /// Set per platform
-        /// </summary>
-        public static Action<EventHandler> OnCanExecuteSubscribed { get; set; }
-        public static Action<EventHandler> OnCanExecuteUnsubscribed { get; set; }
     }
 }

@@ -13,6 +13,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using DURF;
 using DURF.Demo;
 using DURF.Interfaces;
 
@@ -30,12 +31,14 @@ namespace URF
             this.Loaded += (s, e) => ((IViewStateAware) DataContext).Loaded();
             this.Unloaded += (s, e) => ((IViewStateAware) DataContext).Unloaded();
             var vm = DataContext as MainWindowViewModel;
+
+            // this bit is ugly and I hate it, but...it's a demo and it gets the job done
             (vm.Manager.Undoables as INotifyCollectionChanged).CollectionChanged += (s, e) =>
             {
                 UndoMenu.Items.Clear();
 
                 var idx = 1;
-                foreach (var item in vm.Manager.Undoables)
+                foreach (var item in (vm.Manager.Undoables as IStack<TrackableScope>).GetEnumerable())
                 {
                     var menu = new MenuItem()
                         {
@@ -53,7 +56,7 @@ namespace URF
 
                 RedoMenu.Items.Clear();
                 var idx = 1;
-                foreach (var item in vm.Manager.Redoables.GetEnumerable())
+                foreach (var item in (vm.Manager.Redoables as IStack<TrackableScope>).GetEnumerable())
                 {
                     var menu = new MenuItem()
                         {
