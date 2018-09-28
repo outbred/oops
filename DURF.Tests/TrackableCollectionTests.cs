@@ -25,16 +25,20 @@ namespace DURF.Tests
 
         #region Basic Functionality - NO SCOPE
 
-        [TestMethod]
-        public void TestTrackableCollection_ToList()
+        [TrackingTestMethod]
+        public void TestTrackableCollection_ToList(bool track)
         {
-            var coll = new TrackableCollection<Simple>() {new Simple("a"), new Simple("b"), new Simple("c")};
+            var acc = new Accumulator("Test");
+            var coll = new TrackableCollection<Simple>(acc, track) {new Simple("a"), new Simple("b"), new Simple("c")} ;
             var copy = coll.ToList();
             Assert.IsNotNull(copy);
             Assert.AreNotEqual(coll, copy);
             Assert.AreEqual(coll.Count, copy.Count);
             for (int i = 0; i < coll.Count; i++)
                 Assert.AreEqual(coll[i], copy[i]);
+            acc.Close("test");
+            if(track)
+                Assert.AreEqual(3, acc.Records.Count);
         }
 
         [TestMethod]
@@ -64,14 +68,21 @@ namespace DURF.Tests
             Assert.AreEqual(3, coll.Count);
         }
 
-        [TestMethod]
-        public void TestTrackableCollection_Add()
+        [TrackingTestMethod]
+        public void TestTrackableCollection_Add(bool track)
         {
-            var coll = new TrackableCollection<Simple>() {new Simple("a"), new Simple("b"), new Simple("c")};
+            var acc = new Accumulator("test");
+            var coll = new TrackableCollection<Simple>(acc, track) {new Simple("a"), new Simple("b"), new Simple("c")};
             Assert.AreEqual(3, coll.Count);
             coll.Add(new Simple("d"));
+            acc.Close("test");
             Assert.AreEqual(4, coll.Count);
             Assert.AreEqual("d", coll[3].Value);
+
+            if (track)
+                Assert.AreEqual(4, acc.Records.Count);
+            else
+                Assert.AreEqual(0, acc.Records.Count);
         }
 
         [TestMethod]
@@ -510,10 +521,11 @@ namespace DURF.Tests
         #region Threading Tests 
 
         private readonly TrackableCollection<Simple> _testList = new TrackableCollection<Simple>();
-        private int countToAdd = 10000;
+        private int countToAdd = 1000;
         private int numThreadsAdding = 12;
         private bool allDoneWriting = false;
 
+        [Timeout(120 * 1000)]
         [TestMethod]
         public void TestTrackableCollection_Concurrency()
         {
@@ -522,22 +534,28 @@ namespace DURF.Tests
                 list.Add(i);
 
             var threadList = new List<Thread>();
+            var complexthreadList = new List<Thread>();
             var readerThreadList = new List<Thread>();
             for (var i = 0; i < numThreadsAdding; i++)
             {
                 threadList.Add(new Thread(AddStuffToList) {IsBackground = true});
+                complexthreadList.Add(new Thread(AddRemoveStuffFromList) {IsBackground = true});
                 readerThreadList.Add(new Thread(WalkThroughList) {IsBackground = true});
             }
 
             // start all the threads
-            for (var index = 0; index < threadList.Count; index++)
+            for (var index = 0; index < readerThreadList.Count; index++)
             {
                 threadList[index].Start(index);
+                complexthreadList[index].Start(index);
                 readerThreadList[index].Start(index);
             }
 
             // Wait for all of the adders to finish
             foreach (var thread in threadList)
+                thread.Join();
+
+            foreach (var thread in complexthreadList)
                 thread.Join();
 
             // wait on reader threads
@@ -557,6 +575,16 @@ namespace DURF.Tests
             for (var i = 0; i < countToAdd; i++)
             {
                 _testList.Add(new Simple(i.ToString()));
+            }
+        }
+
+        private void AddRemoveStuffFromList(object threadIndex)
+        {
+            for (var i = 0; i < countToAdd; i++)
+            {
+                var simple = new Simple(i.ToString());
+                _testList.Add(simple);
+                _testList.Remove(simple);
             }
         }
 

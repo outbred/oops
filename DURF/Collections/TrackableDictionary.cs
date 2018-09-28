@@ -12,6 +12,14 @@ using DURF.Interfaces;
 
 namespace DURF.Collections
 {
+    /// <summary>
+    /// A powerhouse dictionary that tracks changes, fire CollectionChanged events, and raises property changed.
+    ///
+    /// Concurrency is trivial to this beast - it is iron-clad thread safe.
+    /// </summary>
+    /// <typeparam name="TKey"></typeparam>
+    /// <typeparam name="TValue"></typeparam>
+    [Serializable]
     public class TrackableDictionary<TKey, TValue> : IDictionary<TKey, TValue>, IDictionary, IReadOnlyDictionary<TKey, TValue>, ISerializable, INotifyCollectionChanged, INotifyPropertyChanged
     {
         private Dictionary<TKey, TValue> _internal;
@@ -26,6 +34,18 @@ namespace DURF.Collections
         public bool IsSynchronized { get; } = true;
 
         public bool TrackChanges { get; set; }
+
+        private Accumulator _overridden = null;
+
+        /// <summary>
+        /// If this object needs to be locally scoped, set the Accumulator here.
+        /// Otherwise, all changes go into the global Accumulator.Current
+        /// </summary>
+        public Accumulator Accumulator
+        {
+            get => _overridden ?? Accumulator.Current;
+            set => _overridden = value;
+        }
 
         /// <summary>
         /// False by default b/c of the expensive context switching
@@ -81,7 +101,7 @@ namespace DURF.Collections
                      */
 
                     if (UseDispatcherForCollectionChanged && CollectionChanged != null)
-                        PlatformImplementation.Dispatcher.Wait();
+                        PlatformImplementation.Dispatcher?.Wait();
 
                     if (!_shutOffCollectionChangedEvents && _changeDetectedWhileNotificationIsShutOff)
                         OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
@@ -146,7 +166,7 @@ namespace DURF.Collections
                     var items = _internal.ToDictionary(p => p.Key, p => p.Value);
                     _internal = new Dictionary<TKey, TValue>(source);
                     if (TrackChanges)
-                        Accumulator.Current?.AddUndo(() => this.Replace(items));
+                        Accumulator?.AddUndo(() => this.Replace(items));
                     OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
                 }
             });
@@ -172,7 +192,7 @@ namespace DURF.Collections
                         var item = new KeyValuePair<TKey, TValue>(key, value);
                         _internal.Add(key, value);
                         if (TrackChanges)
-                            Accumulator.Current?.AddUndo(() => Remove(key));
+                            Accumulator?.AddUndo(() => Remove(key));
 
                         OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, item));
                         result = true;
@@ -202,7 +222,7 @@ namespace DURF.Collections
                     {
                         var item = _internal[key];
                         if (TrackChanges)
-                            Accumulator.Current?.AddUndo(() => Add(key, item));
+                            Accumulator?.AddUndo(() => Add(key, item));
 
                         result = _internal.Remove(key);
                         OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, item));
@@ -231,7 +251,7 @@ namespace DURF.Collections
                     {
                         var item = v;
                         if (TrackChanges)
-                            Accumulator.Current?.AddUndo(() => Add(key, item));
+                            Accumulator?.AddUndo(() => Add(key, item));
 
                         result = _internal.Remove(key);
                         OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, v));
@@ -278,7 +298,7 @@ namespace DURF.Collections
                 {
                     _internal.Add(item.Key, item.Value);
                     if (TrackChanges)
-                        Accumulator.Current?.AddUndo(() => Remove(item.Key));
+                        Accumulator?.AddUndo(() => Remove(item.Key));
 
                     OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, item));
                 }
@@ -304,7 +324,7 @@ namespace DURF.Collections
                 lock (SyncRoot)
                 {
                     if (TrackChanges)
-                        Accumulator.Current?.AddUndo
+                        Accumulator?.AddUndo
                         (() =>
                         {
                             foreach (var pair in pairs)
@@ -331,7 +351,7 @@ namespace DURF.Collections
                     var pairs = this._internal.ToDictionary(p => p.Key, p => p.Value);
                     _internal.Clear();
                     if (TrackChanges)
-                        Accumulator.Current?.AddUndo(() => AddRange(pairs));
+                        Accumulator?.AddUndo(() => AddRange(pairs));
 
                     OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
                 }
@@ -368,7 +388,7 @@ namespace DURF.Collections
                     if (_internal.TryGetValue(item.Key, out value))
                     {
                         if (TrackChanges)
-                            Accumulator.Current?.AddUndo(() => Add(item.Key, value));
+                            Accumulator?.AddUndo(() => Add(item.Key, value));
                         result = _internal.Remove(item.Key);
                         OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, item));
                     }
@@ -425,7 +445,7 @@ namespace DURF.Collections
                     var item = new KeyValuePair<TKey, TValue>(key, value);
                     _internal.Add(key, value);
                     if (TrackChanges)
-                        Accumulator.Current?.AddUndo(() => Remove(key));
+                        Accumulator?.AddUndo(() => Remove(key));
 
                     OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, item));
                 }
@@ -443,7 +463,7 @@ namespace DURF.Collections
                     if (_internal.TryGetValue(key, out value))
                     {
                         if (TrackChanges)
-                            Accumulator.Current?.AddUndo(() => Add(key, value));
+                            Accumulator?.AddUndo(() => Add(key, value));
                         result = _internal.Remove(key);
                         OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, new KeyValuePair<TKey, TValue>(key, value)));
                     }
@@ -478,7 +498,7 @@ namespace DURF.Collections
                         _internal[key] = value;
                         var newItem = new KeyValuePair<TKey, TValue>(key, value);
                         if (TrackChanges)
-                            Accumulator.Current?.AddUndo(() => this[key] = oldValue);
+                            Accumulator?.AddUndo(() => this[key] = oldValue);
 
                         if (exist)
                             OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Replace, newItem, oldItem));

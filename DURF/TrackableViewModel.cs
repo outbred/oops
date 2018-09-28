@@ -94,9 +94,21 @@ namespace DURF
         protected virtual bool OnPropertyChanging(string name, object currentValue, bool raiseEvent)
         {
             if(TrackChanges)
-                Accumulator.Current?.AddUndo(() => Set(currentValue, name, raiseEvent));
+                Accumulator?.AddUndo(() => Set(currentValue, name, raiseEvent));
 
             return true;
+        }
+
+        private Accumulator _overridden = null;
+
+        /// <summary>
+        /// If this object needs to be locally scoped, set the Accumulator here.
+        /// Otherwise, all changes go into the global Accumulator.Current
+        /// </summary>
+        public Accumulator Accumulator
+        {
+            get => _overridden ?? Accumulator.Current;
+            set => _overridden = value;
         }
 
         #region Implementation of IViewStateAware

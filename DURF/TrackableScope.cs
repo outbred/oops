@@ -38,25 +38,26 @@ namespace DURF
     [DebuggerDisplay("{_scope.Name}")]
     public class TrackableScope : IDisposable
     {
-        private Accumulator _scope = null;
         private readonly ScopeState _state;
         public TrackableScope(string name, ScopeState state = ScopeState.Do)
         {
             _state = state;
             // if this isn't a 'sub' scope, then save it off to add to appropriate stack
-            if(Accumulator.CurrentOrNew(out var scope, name))
-                _scope = scope;
+            if(Accumulator.CurrentOrNew(out var acc, name))
+                Accumulator = acc;
         }
+
+        public Accumulator Accumulator { get; private set; } = null;
 
 
         /// <inheritdoc />
         public void Dispose() 
         {
-            if (_scope != null)
+            if (Accumulator != null)
             {
-                TrackableScopesManager.Instance.Add(_scope, _state);
-                Accumulator.Current.Close(_scope.Name);
-                _scope = null;
+                TrackableScopesManager.Instance.Add(Accumulator, _state);
+                Accumulator.Current.Close(Accumulator.Name);
+                Accumulator = null;
             }
         }
     }

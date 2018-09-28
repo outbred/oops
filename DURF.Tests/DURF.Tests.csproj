@@ -53,6 +53,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ConcurrentListTests.cs" />
     <Compile Include="ScopeTests.cs" />
+    <Compile Include="TrackingTestMethod.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

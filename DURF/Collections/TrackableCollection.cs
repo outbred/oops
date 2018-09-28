@@ -16,10 +16,12 @@ namespace DURF.Collections
     /// <summary>
     /// An ordered collection that ensures it is always on the correct thread for the CollectionChanged event and fires the PropertyChanged event as well (on whatever thread).
     /// 
-    /// This collection is also thread-safe (concurrency is ok). Merely supply the IDispatcher to utilize this class w/ UI elements (e.g. some binding).
+    /// Concurrency is trivial to this beast - it is iron-clad thread safe.
+    ///
+    /// Merely supply the IDispatcher to utilize this class w/ UI elements (e.g. some binding).
     /// 
     /// All methods are synchronous in nature because most UI controls expect the bound collection to remain unchanged throughout
-    /// the CollectionChanged event cycle.
+    /// the CollectionChanged event cycle (async can break things in nasty, hard to root-cause ways).
     ///
     /// This collection can act like a List<typeparam name="TType"></typeparam>, a Queue<typeparam name="TType"></typeparam>, or a Stack<typeparam name="TType"></typeparam>
     /// depending on your desired behavior.
@@ -40,18 +42,31 @@ namespace DURF.Collections
     {
         private List<TType> _collection = new List<TType>();
 
-        public TrackableCollection(IEnumerable<TType> collection) : this()
+        public TrackableCollection(IEnumerable<TType> collection, Accumulator acc = null, bool trackChanges = true) : this(acc, trackChanges)
         {
-
-            _collection = collection == null ? new List<TType>() : new List<TType>(collection.ToList()); // added ToList()  - Joe (08 Apr 2016)
+            _collection = collection is List<TType> list ? list : new List<TType>(collection?.ToList() ?? new List<TType>());
         }
 
-        public TrackableCollection()
+        public TrackableCollection(Accumulator acc = null, bool trackChanges = true)
         {
             UseDispatcherForCollectionChanged = true;
+            TrackChanges = trackChanges;
+            Accumulator = acc;
         }
 
         public bool TrackChanges { get; set; } = true;
+
+        private Accumulator _overridden = null;
+
+        /// <summary>
+        /// If this object needs to be locally scoped, set the Accumulator here.
+        /// Otherwise, all changes go into the global Accumulator.Current
+        /// </summary>
+        public Accumulator Accumulator
+        {
+            get => _overridden ?? Accumulator.Current;
+            set => _overridden = value;
+        }
 
         [Serializable]
         private class SimpleMonitor : IDisposable
@@ -125,7 +140,7 @@ namespace DURF.Collections
                         _collection.Insert(newIndex, oldItem);
 
                     if (TrackChanges)
-                        Accumulator.Current?.AddUndo(() => { this.Move(newIndex, oldIndex); });
+                        Accumulator?.AddUndo(() => { this.Move(newIndex, oldIndex); });
 
                     this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Move, (object)oldItem, newIndex, oldIndex));
                 }
@@ -153,7 +168,7 @@ namespace DURF.Collections
                     if (chgd)
                     {
                         if (TrackChanges)
-                            Accumulator.Current?.AddUndo(() =>  this.AddRange(items));
+                            Accumulator?.AddUndo(() =>  this.AddRange(items));
                         this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
                     }
                 }
@@ -187,7 +202,7 @@ namespace DURF.Collections
                         this.CheckReentrancy();
 
                         if (TrackChanges)
-                            Accumulator.Current?.AddUndo(() => this.InsertItem(index, current));
+                            Accumulator?.AddUndo(() => this.InsertItem(index, current));
                         this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, current, index));
                     }
                 }
@@ -250,7 +265,7 @@ namespace DURF.Collections
                         indexAdded = index; 
                     }
                     if (TrackChanges)
-                        Accumulator.Current?.AddUndo(() => this.Remove(item));
+                        Accumulator?.AddUndo(() => this.Remove(item));
 
                     this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, item, indexAdded));
                 }
@@ -284,7 +299,7 @@ namespace DURF.Collections
                     }
 
                     if (TrackChanges)
-                        Accumulator.Current?.AddUndo(() => this.Remove(existingItem));
+                        Accumulator?.AddUndo(() => this.Remove(existingItem));
 
                     this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, itemInsertedBeforeExisting, indexAdded));
                 }
@@ -308,7 +323,7 @@ namespace DURF.Collections
                     if (_collection.Remove(item))
                     {
                         if (TrackChanges)
-                            Accumulator.Current?.AddUndo(() => this.InsertItem(idx, item));
+                            Accumulator?.AddUndo(() => this.InsertItem(idx, item));
                         this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, value, idx));
                     }
                 }
@@ -397,7 +412,7 @@ namespace DURF.Collections
                     if (removed)
                     {
                         if (TrackChanges)
-                            Accumulator.Current?.AddUndo(() => this.InsertItem(indx, item));
+                            Accumulator?.AddUndo(() => this.InsertItem(indx, item));
                         this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, item, indx));
                     }
                 }
@@ -420,7 +435,7 @@ namespace DURF.Collections
                         if (removed)
                         {
                             if (TrackChanges)
-                                Accumulator.Current?.AddUndo(() => this.InsertItem(indx, item));
+                                Accumulator?.AddUndo(() => this.InsertItem(indx, item));
                             total++;
                         }
                     }
@@ -499,7 +514,7 @@ namespace DURF.Collections
 
                     _collection[index] = item;
                     if (TrackChanges)
-                        Accumulator.Current?.AddUndo(() => this.SetItem(index, current));
+                        Accumulator?.AddUndo(() => this.SetItem(index, current));
                     this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Replace, item, current, index));
                 }
             });
@@ -638,7 +653,7 @@ namespace DURF.Collections
                     {
                         _collection.Insert(position++, item);
                         if (TrackChanges)
-                            Accumulator.Current?.AddUndo(() => this.Remove(item));
+                            Accumulator?.AddUndo(() => this.Remove(item));
                     }
 
                     this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
@@ -679,7 +694,7 @@ namespace DURF.Collections
 
                     if (TrackChanges && anyRemoved)
                     {
-                        Accumulator.Current?.AddUndo(() =>
+                        Accumulator?.AddUndo(() =>
                         {
                             foreach (var tuple in tuples)
                                 this.InsertItem(tuple.Item1, tuple.Item2);
@@ -754,7 +769,7 @@ namespace DURF.Collections
                     var indexAdded = _collection.Count - 1;
 
                     if (TrackChanges)
-                        Accumulator.Current?.AddUndo(() => Remove(item));
+                        Accumulator?.AddUndo(() => Remove(item));
                     this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, item, indexAdded));
                 }
             });
@@ -935,7 +950,7 @@ namespace DURF.Collections
                      */
 
                     if (UseDispatcherForCollectionChanged && CollectionChanged != null)
-                        PlatformImplementation.Dispatcher.Wait();
+                        PlatformImplementation.Dispatcher?.Wait();
 
                     if (!_shutOffCollectionChangedEvents && _changeDetectedWhileNotificationIsShutOff)
                         OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));

@@ -25,6 +25,7 @@ namespace DURF
         private static Accumulator _current = null;
         private IStack<Record> _changes = new ConcurrentList<Record>();
         private readonly string _scopeName;
+        private readonly bool _wildCard;
         private static readonly object _currentLocker = new object();
 
         public static Accumulator Current => _current;
@@ -49,15 +50,28 @@ namespace DURF
                 if (_current != null)
                     return false;
 
-                _current = new Accumulator(scopeName);
+                _current = new Accumulator(scopeName, false);
                 scope = _current;
                 return true;
             }
         }
 
-        private Accumulator(string scopeName)
+        /// <summary>
+        /// ONLY use if you are looking to use a locally scoped Accumulator, that doesn't concern itself or interact with all of the objects in the system
+        ///
+        /// e.g. A dialog that uses an Accumulator for all the objects it manages
+        ///
+        /// Otherwise, use CurrentOrNew() to auto-magically get ALL changes tracked in the system
+        /// </summary>
+        /// <param name="scopeName"></param>
+        public Accumulator(string scopeName) : this(scopeName, true)
+        {
+        }
+
+        private Accumulator(string scopeName, bool wildCard)
         {
             _scopeName = scopeName;
+            _wildCard = wildCard;
         }
 
         /// <summary>
@@ -72,7 +86,7 @@ namespace DURF
         public void AddUndo(Action onUndo, string propertyName = null, object instance = null)
         {
             // do not allow changes to be tracked in the middle of an undo...well, maybe we do in case of redoing an undo
-            if ( !ReferenceEquals(_current, this) || _changes == null)
+            if ( !_wildCard && (!ReferenceEquals(_current, this) || _changes == null))
             {
                 //Log.WriteLine($"Disallowing change to be tracked for property {propertyName}");
                 return;
