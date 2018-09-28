@@ -72,7 +72,7 @@ namespace DURF.Collections
 
                         _shutOffCollectionChangedEvents = value;
 
-                        // Conforming to changes made to WPF in .Net 4.5, verification of the source collection for an itemscontrol
+                        // Conforming to changes made to WPF in .Net 4.5 (which really creates a worst case scenario), verification of the source collection for an itemscontrol
                         // is done AFTER the handler for the CollectionChanged event is completed (BeginInvoke'd)
                         // This verification ensures that the ItemsControl generated items is consistent with the bound collection items
                         // if the two are different, then an InvalidOperationException is thrown.
@@ -119,39 +119,52 @@ namespace DURF.Collections
 
         #region Ctor
 
-        public TrackableDictionary()
+        public TrackableDictionary(Accumulator acc = null, bool trackChanges = true)
         {
             _internal = new Dictionary<TKey, TValue>();
+            Accumulator = acc;
+            TrackChanges = trackChanges;
         }
 
-        public TrackableDictionary(int capacity)
+        public TrackableDictionary(int capacity, Accumulator acc = null, bool trackChanges = true)
         {
             _internal = new Dictionary<TKey, TValue>(capacity);
+            Accumulator = acc;
+            TrackChanges = trackChanges;
         }
 
-        public TrackableDictionary(IEqualityComparer<TKey> comparer)
+        public TrackableDictionary(IEqualityComparer<TKey> comparer, Accumulator acc = null, bool trackChanges = true)
         {
             _internal = new Dictionary<TKey, TValue>(comparer);
+            Accumulator = acc;
+            TrackChanges = trackChanges;
         }
 
-        public TrackableDictionary(IDictionary<TKey, TValue> dictionary)
+        public TrackableDictionary(IDictionary<TKey, TValue> dictionary, Accumulator acc = null, bool trackChanges = true)
         {
             _internal = new Dictionary<TKey, TValue>(dictionary);
+            Accumulator = acc;
+            TrackChanges = trackChanges;
         }
 
-        public TrackableDictionary(int capacity, IEqualityComparer<TKey> comparer)
+        public TrackableDictionary(int capacity, IEqualityComparer<TKey> comparer, Accumulator acc = null, bool trackChanges = true)
         {
             _internal = new Dictionary<TKey, TValue>(capacity, comparer);
+            Accumulator = acc;
+            TrackChanges = trackChanges;
         }
 
-        public TrackableDictionary(IDictionary<TKey, TValue> dictionary, IEqualityComparer<TKey> comparer)
+        public TrackableDictionary(IDictionary<TKey, TValue> dictionary, IEqualityComparer<TKey> comparer, Accumulator acc = null, bool trackChanges = true)
         {
             _internal = new Dictionary<TKey, TValue>(dictionary, comparer);
+            Accumulator = acc;
+            TrackChanges = trackChanges;
         }
 
         protected TrackableDictionary(SerializationInfo info, StreamingContext context)
         {
             _internal = (Dictionary<TKey, TValue>) info.GetValue("Internal", typeof(Dictionary<TKey, TValue>));
+            TrackChanges = (bool) info.GetValue(@"TrackChanges", typeof(bool));
         }
 
         #endregion
@@ -244,13 +257,15 @@ namespace DURF.Collections
         {
             value = default(TValue);
             var result = false;
+            TValue item = default(TValue);
+
             PushToUiThreadSync(() =>
             {
                 lock (SyncRoot)
                 {
                     if (_internal.TryGetValue(key, out var v))
                     {
-                        var item = v;
+                        item = v;
                         TrackUndo(() => Add(key, item));
 
                         result = _internal.Remove(key);
@@ -259,6 +274,7 @@ namespace DURF.Collections
                 }
             });
 
+            value = item;
             return result;
         }
 
@@ -530,7 +546,8 @@ namespace DURF.Collections
         [SecurityPermission(SecurityAction.Demand, SerializationFormatter = true)]
         public void GetObjectData(SerializationInfo info, StreamingContext context)
         {
-            info.AddValue("Internal", _internal);
+            info.AddValue(@"Internal", _internal);
+            info.AddValue(@"TrackChanges", TrackChanges);
         }
 
         #endregion
