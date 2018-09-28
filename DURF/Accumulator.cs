@@ -25,7 +25,7 @@ namespace DURF
         private static Accumulator _current = null;
         private IStack<Record> _changes = new ConcurrentList<Record>();
         private readonly string _scopeName;
-        private readonly bool _wildCard;
+        private readonly bool _notTheOneRing;
         private static readonly object _currentLocker = new object();
 
         public static Accumulator Current => _current;
@@ -68,10 +68,10 @@ namespace DURF
         {
         }
 
-        private Accumulator(string scopeName, bool wildCard)
+        private Accumulator(string scopeName, bool notTheOneRing)
         {
             _scopeName = scopeName;
-            _wildCard = wildCard;
+            _notTheOneRing = notTheOneRing;
         }
 
         /// <summary>
@@ -83,10 +83,17 @@ namespace DURF
         /// <returns>True if tracking is allowed within this Accumulator for the propname/instance, 
         /// false if this scope is not the current scope (locked) or a duplicate value for an existing prop name/instance is received</returns>
         /// <exception cref="ArgumentNullException">If the property name is empty, instance is null, or onUndo is null</exception>
-        public void AddUndo(Action onUndo, string propertyName = null, object instance = null)
+        public virtual void AddUndo(Action onUndo, string propertyName = null, object instance = null)
         {
-            // do not allow changes to be tracked in the middle of an undo...well, maybe we do in case of redoing an undo
-            if ( !_wildCard && (!ReferenceEquals(_current, this) || _changes == null))
+            /*
+             * Complex check for the following:
+             * Is this is a rogue accumulator that isn't globally scoped?
+             *   - If so, then allow the change
+             *
+             * todo: may not need the ReferenceEquals check anymore...overkill?
+             */
+
+            if (!_notTheOneRing && (!ReferenceEquals(_current, this) || _changes == null))
             {
                 //Log.WriteLine($"Disallowing change to be tracked for property {propertyName}");
                 return;

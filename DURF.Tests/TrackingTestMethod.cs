@@ -9,10 +9,7 @@ namespace DURF.Tests
 {
     public class TrackingTestMethodAttribute : TestMethodAttribute
     {
-        /// <summary>Executes a test method.</summary>
-        /// <param name="testMethod">The test method to execute.</param>
-        /// <returns>An array of TestResult objects that represent the outcome(s) of the test.</returns>
-        /// <remarks>Extensions can override this method to customize running a TestMethod.</remarks>
+        /// <inheritdoc />
         public override TestResult[] Execute(ITestMethod testMethod)
         {
             var result = new List<TestResult>();

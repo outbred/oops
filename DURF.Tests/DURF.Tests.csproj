@@ -52,8 +52,9 @@
     <Compile Include="TrackableCollectionTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ConcurrentListTests.cs" />
-    <Compile Include="ScopeTests.cs" />
+    <Compile Include="TrackableViewModelTests.cs" />
     <Compile Include="TrackingTestMethod.cs" />
+    <Compile Include="TrackableDictionaryTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

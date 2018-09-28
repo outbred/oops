@@ -23,7 +23,7 @@ namespace DURF.Tests
             public string Value { get; }
         }
 
-        #region Basic Functionality - NO SCOPE
+        #region Basic Functionality
 
         [TrackingTestMethod]
         public void TestTrackableCollection_ToList(bool track)
@@ -85,10 +85,11 @@ namespace DURF.Tests
                 Assert.AreEqual(0, acc.Records.Count);
         }
 
-        [TestMethod]
-        public void TestTrackableCollection_AddIfNew()
+        [TrackingTestMethod]
+        public void TestTrackableCollection_AddIfNew(bool track)
         {
-            var coll = new TrackableCollection<Simple>() {new Simple("a"), new Simple("b"), new Simple("c")};
+            var acc = new Accumulator("test");
+            var coll = new TrackableCollection<Simple>(acc, track) {new Simple("a"), new Simple("b"), new Simple("c")};
             Assert.AreEqual(3, coll.Count);
             var d = new Simple("d");
             coll.Add(d);
@@ -97,37 +98,60 @@ namespace DURF.Tests
             coll.AddIfNew(d);
             Assert.AreEqual(4, coll.Count);
             Assert.AreEqual("d", coll[3].Value);
+
+            if (track)
+                Assert.AreEqual(4, acc.Records.Count);
+            else
+                Assert.AreEqual(0, acc.Records.Count);
         }
 
-        [TestMethod]
-        public void TestTrackableCollection_AddAndGetindex()
+        [TrackingTestMethod]
+        public void TestTrackableCollection_AddAndGetindex(bool track)
         {
-            var coll = new TrackableCollection<Simple>() {new Simple("a"), new Simple("b"), new Simple("c")};
+            var acc = new Accumulator("test");
+            var coll = new TrackableCollection<Simple>(acc, track) {new Simple("a"), new Simple("b"), new Simple("c")};
             Assert.AreEqual(3, coll.Count);
             var idx = coll.AddAndGetIndex(new Simple("d"));
             Assert.AreEqual(4, coll.Count);
             Assert.AreEqual(3, idx);
             Assert.AreEqual("d", coll[3].Value);
+
+            if (track)
+                Assert.AreEqual(4, acc.Records.Count);
+            else
+                Assert.AreEqual(0, acc.Records.Count);
         }
 
-        [TestMethod]
-        public void TestTrackableCollection_Clear()
+        [TrackingTestMethod]
+        public void TestTrackableCollection_Clear(bool track)
         {
-            var coll = new TrackableCollection<Simple>() {new Simple("a"), new Simple("b"), new Simple("c")};
+            var acc = new Accumulator("test");
+            var coll = new TrackableCollection<Simple>(acc, track) {new Simple("a"), new Simple("b"), new Simple("c")};
             Assert.AreEqual(3, coll.Count);
             coll.Clear();
             Assert.AreEqual(0, coll.Count);
+
+            if (track)
+                Assert.AreEqual(4, acc.Records.Count);
+            else
+                Assert.AreEqual(0, acc.Records.Count);
         }
 
-        [TestMethod]
-        public void TestTrackableCollection_ReplaceWith()
+        [TrackingTestMethod]
+        public void TestTrackableCollection_ReplaceWith(bool track)
         {
-            var coll = new TrackableCollection<Simple>() {new Simple("a"), new Simple("b"), new Simple("c")};
+            var acc = new Accumulator("test");
+            var coll = new TrackableCollection<Simple>(acc, track) {new Simple("a"), new Simple("b"), new Simple("c")};
             coll.ReplaceWith(new TrackableCollection<Simple>() {new Simple("c"), new Simple("d"), new Simple("e")});
             Assert.AreEqual(3, coll.Count);
             Assert.AreEqual("c", coll[0].Value);
             Assert.AreEqual("d", coll[1].Value);
             Assert.AreEqual("e", coll[2].Value);
+
+            if (track)
+                Assert.AreEqual(4, acc.Records.Count);
+            else
+                Assert.AreEqual(0, acc.Records.Count);
         }
 
         [TestMethod]
@@ -142,11 +166,12 @@ namespace DURF.Tests
             Assert.IsTrue(coll.Contains(d));
         }
 
-        [TestMethod]
-        public void TestTrackableCollection_Remove()
+        [TrackingTestMethod]
+        public void TestTrackableCollection_Remove(bool track)
         {
+            var acc = new Accumulator("test");
             var b = new Simple("b");
-            var coll = new TrackableCollection<Simple>() {new Simple("a"), b, new Simple("c")};
+            var coll = new TrackableCollection<Simple>(acc, track) {new Simple("a"), b, new Simple("c")};
             Assert.IsTrue(coll.Remove(b));
             Assert.AreEqual(2, coll.Count);
             Assert.IsFalse(coll.Contains(b));
@@ -157,44 +182,67 @@ namespace DURF.Tests
             Assert.IsTrue(coll.Remove(b));
             Assert.AreEqual(2, coll.Count);
             Assert.IsFalse(coll.Contains(b));
+
+            if (track)
+                Assert.AreEqual(6, acc.Records.Count);
+            else
+                Assert.AreEqual(0, acc.Records.Count);
         }
 
-        [TestMethod]
-        public void TestTrackableCollection_RemoveMany()
+        [TrackingTestMethod]
+        public void TestTrackableCollection_RemoveMany(bool track)
         {
+            var acc = new Accumulator("test");
             var b = new Simple("b");
             var c = new Simple("c");
-            var coll = new TrackableCollection<Simple>() {new Simple("a"), b, c};
+            var coll = new TrackableCollection<Simple>(acc, track) {new Simple("a"), b, c};
             Assert.AreEqual(2, coll.Remove(new[] {b, c}));
             Assert.AreEqual(1, coll.Count);
             Assert.IsFalse(coll.Contains(b));
             Assert.IsFalse(coll.Contains(c));
+
+            if (track)
+                Assert.AreEqual(5, acc.Records.Count);
+            else
+                Assert.AreEqual(0, acc.Records.Count);
         }
 
-        [TestMethod]
-        public void TestTrackableCollection_ReplaceAll()
+        [TrackingTestMethod]
+        public void TestTrackableCollection_ReplaceAll(bool track)
         {
+            var acc = new Accumulator("test");
             var b = new Simple("b");
             var c = new Simple("c");
             var d = new Simple("d");
-            var coll = new TrackableCollection<Simple>() {new Simple("a"), b, c, b, c, b, b};
+            var coll = new TrackableCollection<Simple>(acc, track) {new Simple("a"), b, c, b, c, b, b};
             var total = coll.ReplaceAll(b, d);
             Assert.AreEqual(4, total);
             Assert.AreEqual(coll[1], d);
             Assert.AreEqual(coll[3], d);
             Assert.AreEqual(coll[5], d);
             Assert.AreEqual(coll[6], d);
+
+            if (track)
+                Assert.AreEqual(11, acc.Records.Count);
+            else
+                Assert.AreEqual(0, acc.Records.Count);
         }
 
-        [TestMethod]
-        public void TestTrackableCollection_RemoveAndGetIndex()
+        [TrackingTestMethod]
+        public void TestTrackableCollection_RemoveAndGetIndex(bool track)
         {
+            var acc = new Accumulator("test");
             var b = new Simple("b");
-            var coll = new TrackableCollection<Simple>() {new Simple("a"), b, new Simple("c"), b};
+            var coll = new TrackableCollection<Simple>(acc, track) {new Simple("a"), b, new Simple("c"), b};
             var idx = coll.RemoveAndGetIndex(b);
             Assert.AreEqual(1, idx);
             idx = coll.RemoveAndGetIndex(b);
             Assert.AreEqual(2, idx);
+
+            if (track)
+                Assert.AreEqual(6, acc.Records.Count);
+            else
+                Assert.AreEqual(0, acc.Records.Count);
         }
 
         [TestMethod]
@@ -222,71 +270,100 @@ namespace DURF.Tests
         }
 
 
-        [TestMethod]
-        public void TestTrackableCollection_Insert()
+        [TrackingTestMethod]
+        public void TestTrackableCollection_Insert(bool track)
         {
+            var acc = new Accumulator("test");
             var b = new Simple("b");
             var c = new Simple("c");
-            var coll = new TrackableCollection<Simple>() {new Simple("a"), b, new Simple("c")};
+            var coll = new TrackableCollection<Simple>(acc, track) {new Simple("a"), b, new Simple("c")};
             coll.Insert(0, c);
             Assert.AreEqual(4, coll.Count);
             Assert.AreEqual(c, coll[0]);
+
+            if (track)
+                Assert.AreEqual(4, acc.Records.Count);
+            else
+                Assert.AreEqual(0, acc.Records.Count);
         }
 
-        [TestMethod]
-        public void TestTrackableCollection_RemoveAt()
+        [TrackingTestMethod]
+        public void TestTrackableCollection_RemoveAt(bool track)
         {
+            var acc = new Accumulator("test");
             var b = new Simple("b");
-            var coll = new TrackableCollection<Simple>() {new Simple("a"), b, new Simple("c")};
+            var coll = new TrackableCollection<Simple>(acc, track) {new Simple("a"), b, new Simple("c")};
             coll.RemoveAt(1);
             Assert.AreEqual(2, coll.Count);
             Assert.AreEqual("c", coll[1].Value);
+
+            if (track)
+                Assert.AreEqual(4, acc.Records.Count);
+            else
+                Assert.AreEqual(0, acc.Records.Count);
         }
 
-        [TestMethod]
-        public void TestTrackableCollection_AddRange()
+        [TrackingTestMethod]
+        public void TestTrackableCollection_AddRange(bool track)
         {
-            var coll = new TrackableCollection<Simple>() {new Simple("a"), new Simple("b"), new Simple("c")};
+            var acc = new Accumulator("test");
+            var coll = new TrackableCollection<Simple>(acc, track) {new Simple("a"), new Simple("b"), new Simple("c")};
             coll.AddRange(new List<Simple> {new Simple("d"), new Simple("e"), new Simple("f")});
             Assert.AreEqual(6, coll.Count);
             Assert.AreEqual("d", coll[3].Value);
             Assert.AreEqual("e", coll[4].Value);
             Assert.AreEqual("f", coll[5].Value);
+
+            if (track)
+                Assert.AreEqual(6, acc.Records.Count);
+            else
+                Assert.AreEqual(0, acc.Records.Count);
         }
 
-        [TestMethod]
-        public void TestTrackableCollection_RemoveAllInstances()
+        [TrackingTestMethod]
+        public void TestTrackableCollection_RemoveAllInstances(bool track)
         {
+            var acc = new Accumulator("test");
             var b = new Simple("b");
             var c = new Simple("c");
-            var d = new Simple("d");
-            var coll = new TrackableCollection<Simple>() {new Simple("a"), b, c, b, c, b, b};
+            var coll = new TrackableCollection<Simple>(acc, track) {new Simple("a"), b, c, b, c, b, b};
             Assert.AreEqual(7, coll.Count);
             coll.RemoveAllInstances(b);
             Assert.AreEqual(3, coll.Count);
             Assert.IsFalse(coll.Contains(b));
+
+            if (track)
+                Assert.AreEqual(11, acc.Records.Count);
+            else
+                Assert.AreEqual(0, acc.Records.Count);
         }
 
 
-        [TestMethod]
-        public void TestTrackableCollection_FirstOrDefault()
+        [TrackingTestMethod]
+        public void TestTrackableCollection_FirstOrDefault(bool track)
         {
+            var acc = new Accumulator("test");
             var a = new Simple("a");
             var b = new Simple("b");
             var c = new Simple("c");
-            var coll = new TrackableCollection<Simple>() {a, b, c, b, c, b, b};
+            var coll = new TrackableCollection<Simple>(acc, track) {a, b, c, b, c, b, b};
             var first = coll.FirstOrDefault();
             Assert.AreEqual(a, first);
             coll.Clear();
             first = coll.FirstOrDefault();
             Assert.IsNull(first);
 
-            var coll2 = new TrackableCollection<int>() {-1, 1, 2};
+            var coll2 = new TrackableCollection<int>(acc, track) {-1, 1, 2};
             var f = coll2.FirstOrDefault();
             Assert.AreEqual(-1, f);
             coll2.Clear();
             f = coll2.FirstOrDefault();
             Assert.AreEqual(default(int), f);
+
+            if (track)
+                Assert.AreEqual(12, acc.Records.Count);
+            else
+                Assert.AreEqual(0, acc.Records.Count);
         }
 
         [TestMethod]
@@ -301,25 +378,31 @@ namespace DURF.Tests
             coll.First();
         }
 
-        [TestMethod]
-        public void TestTrackableCollection_LastOrDefault()
+        [TrackingTestMethod]
+        public void TestTrackableCollection_LastOrDefault(bool track)
         {
+            var acc = new Accumulator("test");
             var a = new Simple("a");
             var b = new Simple("b");
             var c = new Simple("c");
-            var coll = new TrackableCollection<Simple>() {a, b, c, b, c, b, b};
+            var coll = new TrackableCollection<Simple>(acc, track) {a, b, c, b, c, b, b};
             var last = coll.LastOrDefault();
             Assert.AreEqual(b, last);
             coll.Clear();
             last = coll.LastOrDefault();
             Assert.IsNull(last);
 
-            var coll2 = new TrackableCollection<int>() {-1, 1, 2};
+            var coll2 = new TrackableCollection<int>(acc, track) {-1, 1, 2};
             var f = coll2.LastOrDefault();
             Assert.AreEqual(2, f);
             coll2.Clear();
             f = coll2.LastOrDefault();
             Assert.AreEqual(default(int), f);
+
+            if (track)
+                Assert.AreEqual(12, acc.Records.Count);
+            else
+                Assert.AreEqual(0, acc.Records.Count);
         }
 
         [TestMethod]
@@ -363,36 +446,48 @@ namespace DURF.Tests
         }
 
 
-        [TestMethod]
-        public void TestTrackableCollection_Move()
+        [TrackingTestMethod]
+        public void TestTrackableCollection_Move(bool track)
         {
+            var acc = new Accumulator("test");
             var a = new Simple("a");
             var b = new Simple("b");
             var c = new Simple("c");
-            var coll = new TrackableCollection<Simple>() {a, b, c, b, c, b, b};
-            coll.Move(0, 3);
+            var coll = new TrackableCollection<Simple>(acc, track) {a, b, c, b, c, b, b};
+            coll.SafeMove(0, 3);
             Assert.AreEqual(2, coll.IndexOf(a));
-            coll.Move(3, 3);
+            coll.SafeMove(3, 3);
 
-            coll.Move(1, 40);
+            coll.SafeMove(1, 40); // should result in an Add
 
             coll.Clear();
             coll.Add(a);
-            coll.Move(0, 0);
-            coll.Move(0, 1);
+            coll.SafeMove(0, 0);
+            coll.SafeMove(0, 1);
             coll.Clear();
-            coll.Move(0, 0);
+            coll.SafeMove(0, 0);
+
+            if (track)
+                Assert.AreEqual(13, acc.Records.Count);
+            else
+                Assert.AreEqual(0, acc.Records.Count);
         }
 
-        [TestMethod]
-        public void TestTrackableCollection_Move_OutOfRange()
+        [TrackingTestMethod]
+        public void TestTrackableCollection_Move_OutOfRange(bool track)
         {
+            var acc = new Accumulator("test");
             var a = new Simple("a");
             var b = new Simple("b");
             var c = new Simple("c");
-            var coll = new TrackableCollection<Simple>() { a, b, c, b, c, b, b };
-            coll.Move(0, 10);
+            var coll = new TrackableCollection<Simple>(acc, track) { a, b, c, b, c, b, b };
+            coll.SafeMove(0, 10);
             Assert.AreEqual(6, coll.IndexOf(a));
+
+            if (track)
+                Assert.AreEqual(8, acc.Records.Count);
+            else
+                Assert.AreEqual(0, acc.Records.Count);
         }
 
         [TestMethod]
@@ -403,24 +498,31 @@ namespace DURF.Tests
             var b = new Simple("b");
             var c = new Simple("c");
             var coll = new TrackableCollection<Simple>() { a, b, c, b, c, b, b };
-            coll.Move(-1, 10);
+            coll.SafeMove(-1, 10);
         }
 
-        [TestMethod]
-        public void TestTrackableCollection_Enqueue()
+        [TrackingTestMethod]
+        public void TestTrackableCollection_Enqueue(bool track)
         {
-            IQueue<Simple> coll = new TrackableCollection<Simple>();
+            var acc = new Accumulator("test");
+            IQueue<Simple> coll = new TrackableCollection<Simple>(acc, track);
             Assert.AreEqual(0, coll.Count());
             coll.Enqueue(new Simple("a"));
             Assert.AreEqual(1, coll.Count());
             coll.Enqueue(new Simple("b"));
             Assert.AreEqual(2, coll.Count());
+
+            if (track)
+                Assert.AreEqual(2, acc.Records.Count);
+            else
+                Assert.AreEqual(0, acc.Records.Count);
         }
 
-        [TestMethod]
-        public void TestTrackableCollection_Dequeue()
+        [TrackingTestMethod]
+        public void TestTrackableCollection_Dequeue(bool track)
         {
-            IQueue<Simple> coll = new TrackableCollection<Simple>();
+            var acc = new Accumulator("test");
+            IQueue<Simple> coll = new TrackableCollection<Simple>(acc, track);
             Assert.AreEqual(0, coll.Count());
             var a = new Simple("a");
             var b = new Simple("b");
@@ -432,6 +534,11 @@ namespace DURF.Tests
             var b1 = coll.Dequeue();
             Assert.AreEqual(b, b1);
             Assert.AreEqual(0, coll.Count());
+
+            if (track)
+                Assert.AreEqual(4, acc.Records.Count);
+            else
+                Assert.AreEqual(0, acc.Records.Count);
         }
 
         [TestMethod]
@@ -443,10 +550,11 @@ namespace DURF.Tests
             coll.Dequeue();
         }
 
-        [TestMethod]
-        public void TestTrackableCollection_TryDequeue()
+        [TrackingTestMethod]
+        public void TestTrackableCollection_TryDequeue(bool track)
         {
-            IQueue<Simple> coll = new TrackableCollection<Simple>();
+            var acc = new Accumulator("test");
+            IQueue<Simple> coll = new TrackableCollection<Simple>(acc, track);
             Assert.AreEqual(0, coll.Count());
             var a = new Simple("a");
             var b = new Simple("b");
@@ -459,23 +567,35 @@ namespace DURF.Tests
             Assert.AreEqual(b, b1);
             Assert.AreEqual(0, coll.Count());
             Assert.IsFalse(coll.TryDequeue(out var c1));
+
+            if (track)
+                Assert.AreEqual(4, acc.Records.Count);
+            else
+                Assert.AreEqual(0, acc.Records.Count);
         }
 
-        [TestMethod]
-        public void TestTrackableCollection_Push()
+        [TrackingTestMethod]
+        public void TestTrackableCollection_Push(bool track)
         {
-            IStack<Simple> coll = new TrackableCollection<Simple>();
+            var acc = new Accumulator("test");
+            IStack<Simple> coll = new TrackableCollection<Simple>(acc, track);
             Assert.AreEqual(0, coll.Count());
             coll.Push(new Simple("a"));
             Assert.AreEqual(1, coll.Count());
             coll.Push(new Simple("b"));
             Assert.AreEqual(2, coll.Count());
+
+            if (track)
+                Assert.AreEqual(2, acc.Records.Count);
+            else
+                Assert.AreEqual(0, acc.Records.Count);
         }
 
-        [TestMethod]
-        public void TestTrackableCollection_Pop()
+        [TrackingTestMethod]
+        public void TestTrackableCollection_Pop(bool track)
         {
-            IStack<Simple> coll = new TrackableCollection<Simple>();
+            var acc = new Accumulator("test");
+            IStack<Simple> coll = new TrackableCollection<Simple>(acc, track);
             Assert.AreEqual(0, coll.Count());
             var a = new Simple("a");
             var b = new Simple("b");
@@ -487,6 +607,11 @@ namespace DURF.Tests
             var a1 = coll.Pop();
             Assert.AreEqual(a, a1);
             Assert.AreEqual(0, coll.Count());
+
+            if (track)
+                Assert.AreEqual(4, acc.Records.Count);
+            else
+                Assert.AreEqual(0, acc.Records.Count);
         }
 
         [TestMethod]
@@ -498,10 +623,11 @@ namespace DURF.Tests
             coll.Pop();
         }
 
-        [TestMethod]
-        public void TestTrackableCollection_TryPop()
+        [TrackingTestMethod]
+        public void TestTrackableCollection_TryPop(bool track)
         {
-            IStack<Simple> coll = new TrackableCollection<Simple>();
+            var acc = new Accumulator("test");
+            IStack<Simple> coll = new TrackableCollection<Simple>(acc, track);
             Assert.AreEqual(0, coll.Count());
             var a = new Simple("a");
             var b = new Simple("b");
@@ -514,25 +640,29 @@ namespace DURF.Tests
             Assert.AreEqual(a, a1);
             Assert.AreEqual(0, coll.Count());
             Assert.IsFalse(coll.TryPop(out var c1));
+
+            if (track)
+                Assert.AreEqual(4, acc.Records.Count);
+            else
+                Assert.AreEqual(0, acc.Records.Count);
         }
 
         #endregion
 
         #region Threading Tests 
 
-        private readonly TrackableCollection<Simple> _testList = new TrackableCollection<Simple>();
-        private int countToAdd = 1000;
-        private int numThreadsAdding = 12;
+        private TrackableCollection<Simple> _testList = null;
+        private int countToAdd = 1200;
+        private int numThreadsAdding = 10;
         private bool allDoneWriting = false;
 
         [Timeout(120 * 1000)]
-        [TestMethod]
-        public void TestTrackableCollection_Concurrency()
+        [TrackingTestMethod]
+        public void TestTrackableCollection_Concurrency(bool track)
         {
-            var list = new TrackableCollection<object>();
-            for (var i = 0; i < 100; i++)
-                list.Add(i);
-
+            var acc = new Accumulator("test");
+            _testList = new TrackableCollection<Simple>(acc, track);
+            
             var threadList = new List<Thread>();
             var complexthreadList = new List<Thread>();
             var readerThreadList = new List<Thread>();
@@ -568,6 +698,11 @@ namespace DURF.Tests
             var totalCount = _testList.Count;
             var intendedCount = numThreadsAdding * countToAdd;
             Assert.IsTrue(totalCount == intendedCount);
+
+            if (track)
+                Assert.AreEqual(3 * numThreadsAdding * countToAdd, acc.Records.Count);
+            else
+                Assert.AreEqual(0, acc.Records.Count);
         }
 
         private void AddStuffToList(object threadIndex)
@@ -608,12 +743,6 @@ namespace DURF.Tests
                 Assert.IsTrue(false); // our access to enumerate the collection was not thread safe!! - joe (08 Apr 2016)
             }
         }
-
-        #endregion
-
-        #region Tracking Tests
-
-        // todo - any method that changes the collection should add to the current scope if there is one
 
         #endregion
     }

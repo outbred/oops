@@ -35,7 +35,7 @@ namespace DURF
     /// to roll everything back, and push the scope to the Redo stack.  Using the Redo command in the TrackableScopesManager would then continue the game of ping pong
     /// and push the scope back to the Undo stack, and so on and so forth.
     /// </summary>
-    [DebuggerDisplay("{_scope.Name}")]
+    [DebuggerDisplay("{Accumulator.Name}")]
     public class TrackableScope : IDisposable
     {
         private readonly ScopeState _state;

@@ -37,24 +37,27 @@ namespace DURF.Collections
     /// </summary>
     /// <typeparam name="TType">Any type that the collection will contain</typeparam>
     [Serializable]
-    [DebuggerDisplay(@"Count = {Count}")]
+    [DebuggerDisplay(@"Count = {Count}; Name = {Name}")]
     public class TrackableCollection<TType> : IList<TType>, IList, IReadOnlyList<TType>, IConvertible, ISerializable, INotifyCollectionChanged, INotifyPropertyChanged, IQueue<TType>, IStack<TType>
     {
         private List<TType> _collection = new List<TType>();
 
-        public TrackableCollection(IEnumerable<TType> collection, Accumulator acc = null, bool trackChanges = true) : this(acc, trackChanges)
+        public TrackableCollection(IEnumerable<TType> collection, Accumulator acc = null, bool trackChanges = true, string name = null) : this(acc, trackChanges, name)
         {
-            _collection = collection is List<TType> list ? list : new List<TType>(collection?.ToList() ?? new List<TType>());
+            _collection = collection is List<TType> list ? list : new List<TType>(collection ?? new List<TType>());
         }
 
-        public TrackableCollection(Accumulator acc = null, bool trackChanges = true)
+        public TrackableCollection(Accumulator acc = null, bool trackChanges = true, string name = null)
         {
             UseDispatcherForCollectionChanged = true;
             TrackChanges = trackChanges;
             Accumulator = acc;
+            Name = name;
         }
 
         public bool TrackChanges { get; set; } = true;
+
+        public string Name { get; set; }
 
         private Accumulator _overridden = null;
 
@@ -68,49 +71,15 @@ namespace DURF.Collections
             set => _overridden = value;
         }
 
-        [Serializable]
-        private class SimpleMonitor : IDisposable
-        {
-            private int _busyCount;
-
-            public bool Busy => this._busyCount > 0;
-
-            public void Enter()
-            {
-                this._busyCount += 1;
-            }
-
-            public void Dispose()
-            {
-                this._busyCount -= 1;
-            }
-        }
-
-        private SimpleMonitor _monitor = new SimpleMonitor();
-
-        protected void CheckReentrancy()
-        {
-            if (this._monitor.Busy && this.CollectionChanged != null && this.CollectionChanged.GetInvocationList().Length > 1)
-            {
-                // this could be bad...but we'll pretend it's not
-                //throw new InvalidOperationException(@"Reentrancy not allowed.");
-            }
-        }
-
-        protected IDisposable BlockReentrancy()
-        {
-            this._monitor.Enter();
-            return this._monitor;
-        }
-
         #region Thread-safe methods
 
         /// <summary>
-        /// Moves an item from oldIndex to newIndex. 
+        /// Moves an item from oldIndex to newIndex, safely.  If the index is out of range, just adds it to the end.
         /// </summary>
         /// <param name="oldIndex"></param>
         /// <param name="newIndex"></param>
-        public void Move(int oldIndex, int newIndex)
+        /// <exception cref="ArgumentOutOfRangeException">If the newIndex is < 0 (bug in your code)</exception>
+        public void SafeMove(int oldIndex, int newIndex)
         {
             if (oldIndex == newIndex)
                 return;
@@ -120,7 +89,6 @@ namespace DURF.Collections
             {
                 lock (SyncRoot)
                 {
-                    CheckReentrancy();
                     _collection.RemoveAt(oldIndex);
 
                     /*
@@ -139,10 +107,9 @@ namespace DURF.Collections
                     else
                         _collection.Insert(newIndex, oldItem);
 
-                    if (TrackChanges)
-                        Accumulator?.AddUndo(() => { this.Move(newIndex, oldIndex); });
+                    TrackUndo(() => { this.SafeMove(newIndex, oldIndex); });
 
-                    this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Move, (object)oldItem, newIndex, oldIndex));
+                    this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Move, (object) oldItem, newIndex, oldIndex));
                 }
             });
         }
@@ -159,16 +126,13 @@ namespace DURF.Collections
             {
                 lock (SyncRoot)
                 {
-                    this.CheckReentrancy();
-
                     var chgd = Count > 0;
 
                     var items = _collection.ToList();
                     _collection.Clear();
                     if (chgd)
                     {
-                        if (TrackChanges)
-                            Accumulator?.AddUndo(() =>  this.AddRange(items));
+                        TrackUndo(() => this.AddRange(items));
                         this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
                     }
                 }
@@ -199,10 +163,7 @@ namespace DURF.Collections
                     index = _collection.IndexOf(current);
                     if (_collection.Remove(current))
                     {
-                        this.CheckReentrancy();
-
-                        if (TrackChanges)
-                            Accumulator?.AddUndo(() => this.InsertItem(index, current));
+                        TrackUndo(() => this.InsertItem(index, current));
                         this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, current, index));
                     }
                 }
@@ -216,7 +177,7 @@ namespace DURF.Collections
                 lock (SyncRoot)
                 {
                     int total = 0;
-                    while (_collection.Remove(item)) 
+                    while (Remove(item))
                         total++;
 
                     if (total > 0)
@@ -251,21 +212,19 @@ namespace DURF.Collections
             {
                 lock (SyncRoot)
                 {
-                    this.CheckReentrancy();
-
                     var indexAdded = 0;
                     if (index > (_collection.Count - 1))
                     {
                         _collection.Add(item);
-                        indexAdded = Count - 1; 
+                        indexAdded = Count - 1;
                     }
                     else
                     {
                         _collection.Insert(index, item);
-                        indexAdded = index; 
+                        indexAdded = index;
                     }
-                    if (TrackChanges)
-                        Accumulator?.AddUndo(() => this.Remove(item));
+
+                    TrackUndo(() => this.Remove(item));
 
                     this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, item, indexAdded));
                 }
@@ -283,7 +242,6 @@ namespace DURF.Collections
             {
                 lock (SyncRoot)
                 {
-                    this.CheckReentrancy();
                     var index = _collection.IndexOf(existingItem);
 
                     var indexAdded = 0;
@@ -295,11 +253,10 @@ namespace DURF.Collections
                     else
                     {
                         _collection.Insert(index, itemInsertedBeforeExisting);
-                        indexAdded = index; 
+                        indexAdded = index;
                     }
 
-                    if (TrackChanges)
-                        Accumulator?.AddUndo(() => this.Remove(existingItem));
+                    TrackUndo(() => this.RemoveAt(indexAdded));
 
                     this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, itemInsertedBeforeExisting, indexAdded));
                 }
@@ -316,14 +273,11 @@ namespace DURF.Collections
             {
                 lock (SyncRoot)
                 {
-                    this.CheckReentrancy();
-
-                    var item = (TType)value;
+                    var item = (TType) value;
                     var idx = _collection.IndexOf(item);
                     if (_collection.Remove(item))
                     {
-                        if (TrackChanges)
-                            Accumulator?.AddUndo(() => this.InsertItem(idx, item));
+                        TrackUndo(() => this.InsertItem(idx, item));
                         this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, value, idx));
                     }
                 }
@@ -388,7 +342,7 @@ namespace DURF.Collections
                 lock (SyncRoot)
                     return _collection[index];
             }
-            set => this.SetItem(index, (TType)value);
+            set => this.SetItem(index, (TType) value);
         }
 
         /// <summary>
@@ -411,8 +365,7 @@ namespace DURF.Collections
                     removed = _collection.Remove(item);
                     if (removed)
                     {
-                        if (TrackChanges)
-                            Accumulator?.AddUndo(() => this.InsertItem(indx, item));
+                        TrackUndo(() => this.InsertItem(indx, item));
                         this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, item, indx));
                     }
                 }
@@ -434,15 +387,13 @@ namespace DURF.Collections
                         var removed = _collection.Remove(item);
                         if (removed)
                         {
-                            if (TrackChanges)
-                                Accumulator?.AddUndo(() => this.InsertItem(indx, item));
+                            TrackUndo(() => this.InsertItem(indx, item));
                             total++;
                         }
                     }
 
-                    if(Count != count)
+                    if (Count != count)
                         this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
-
                 }
             });
             return total;
@@ -459,7 +410,7 @@ namespace DURF.Collections
             lock (SyncRoot)
             {
                 if (_collection.Any())
-                    _collection.CopyTo((TType[])array, index);
+                    _collection.CopyTo((TType[]) array, index);
             }
         }
 
@@ -473,7 +424,7 @@ namespace DURF.Collections
                 lock (SyncRoot)
                     return _collection.Count;
             }
-        } 
+        }
 
         /// <summary>
         /// Gets an object that can be used to synchronize access to the <see cref="T:System.Collections.ICollection"/>.
@@ -510,11 +461,8 @@ namespace DURF.Collections
             {
                 lock (SyncRoot)
                 {
-                    this.CheckReentrancy();
-
                     _collection[index] = item;
-                    if (TrackChanges)
-                        Accumulator?.AddUndo(() => this.SetItem(index, current));
+                    TrackUndo(() => this.SetItem(index, current));
                     this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Replace, item, current, index));
                 }
             });
@@ -544,7 +492,7 @@ namespace DURF.Collections
         int IList.Add(object value)
         {
             var idx = Count;
-            InsertItem(idx, (TType)value);
+            InsertItem(idx, (TType) value);
             return idx;
         }
 
@@ -555,7 +503,7 @@ namespace DURF.Collections
         /// true if the <see cref="T:System.Object"/> is found in the <see cref="T:System.Collections.IList"/>; otherwise, false.
         /// </returns>
         /// <param name="value">The object to locate in the <see cref="T:System.Collections.IList"/>. </param>
-        bool IList.Contains(object value) => Contains((TType)value);
+        bool IList.Contains(object value) => Contains((TType) value);
 
         /// <summary>
         /// Removes all items from the <see cref="T:System.Collections.IList"/>.
@@ -574,7 +522,7 @@ namespace DURF.Collections
         {
             // b/c Telerik sucks - Ryan (15 Aug 2016)
             if (value is TType)
-                return IndexOf((TType)value);
+                return IndexOf((TType) value);
             return -1;
         }
 
@@ -584,7 +532,7 @@ namespace DURF.Collections
         /// <param name="index">The zero-based index at which <paramref name="value"/> should be inserted. </param><param name="value">The object to insert into the <see cref="T:System.Collections.IList"/>. </param><exception cref="T:System.ArgumentOutOfRangeException"><paramref name="index"/> is not a valid index in the <see cref="T:System.Collections.IList"/>. </exception><exception cref="T:System.NotSupportedException">The <see cref="T:System.Collections.IList"/> is read-only.-or- The <see cref="T:System.Collections.IList"/> has a fixed size. </exception><exception cref="T:System.NullReferenceException"><paramref name="value"/> is null reference in the <see cref="T:System.Collections.IList"/>.</exception>
         void IList.Insert(int index, object value)
         {
-            InsertItem(index, (TType)value);
+            InsertItem(index, (TType) value);
         }
 
         /// <summary>
@@ -652,14 +600,12 @@ namespace DURF.Collections
                     foreach (var item in toAdd)
                     {
                         _collection.Insert(position++, item);
-                        if (TrackChanges)
-                            Accumulator?.AddUndo(() => this.Remove(item));
+                        TrackUndo(() => this.Remove(item));
                     }
 
                     this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
                 }
             });
-
         }
 
         /// <summary>
@@ -676,8 +622,6 @@ namespace DURF.Collections
                 lock (SyncRoot)
                 {
                     bool anyRemoved = false;
-                    this.CheckReentrancy();
-
                     var tuples = new List<Tuple<int, TType>>();
                     foreach (var child in enumerable)
                     {
@@ -692,9 +636,9 @@ namespace DURF.Collections
                             Debug.WriteLine($"Unable to remove item {child.ToString()} b/c it is not in the collection.");
                     }
 
-                    if (TrackChanges && anyRemoved)
+                    if (anyRemoved)
                     {
-                        Accumulator?.AddUndo(() =>
+                        TrackUndo(() =>
                         {
                             foreach (var tuple in tuples)
                                 this.InsertItem(tuple.Item1, tuple.Item2);
@@ -724,10 +668,11 @@ namespace DURF.Collections
                         if ((item == null && existingItem == null) || item?.Equals(existingItem) == true)
                         {
                             _collection[index] = newItem;
+                            var idx = index;
+                            TrackUndo(() => SetItem(idx, item));
                             total++;
                         }
                     }
-
                 }
             });
             return total;
@@ -739,7 +684,9 @@ namespace DURF.Collections
             {
                 lock (SyncRoot)
                 {
+                    var old = _collection;
                     _collection = items.ToList();
+                    TrackUndo(() => ReplaceWith(old));
                     this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
                 }
             });
@@ -760,16 +707,13 @@ namespace DURF.Collections
             {
                 lock (SyncRoot)
                 {
-                    this.CheckReentrancy();
-
                     if (_collection.Contains(item))
                         return;
 
                     _collection.Add(item);
                     var indexAdded = _collection.Count - 1;
 
-                    if (TrackChanges)
-                        Accumulator?.AddUndo(() => Remove(item));
+                    TrackUndo(() => RemoveAt(indexAdded));
                     this.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, item, indexAdded));
                 }
             });
@@ -821,41 +765,38 @@ namespace DURF.Collections
 
             _changeDetectedWhileNotificationIsShutOff = false;
 
-            using (BlockReentrancy())
+            if (CollectionChanged != null)
             {
-                if (CollectionChanged != null)
+                try
                 {
-                    try
+                    if (_pendingNotifications.Any())
                     {
-                        if (_pendingNotifications.Any())
-                        {
-                            e = new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset);
-                            _pendingNotifications.Clear();
-                        }
+                        e = new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset);
+                        _pendingNotifications.Clear();
+                    }
 
-                        if (e.Action != NotifyCollectionChangedAction.Move && e.Action != NotifyCollectionChangedAction.Replace)
-                            this.OnPropertyChanged(nameof(Count));
-                        this.OnPropertyChanged(@"Item[]");
-                        CollectionChanged?.Invoke(this, e);
-                        Debug.WriteLine($"fire collectionchanged");
-                    }
-                    catch (Exception ex)
-                    {
-                        Log(@"Unable to fire collection changed event cleanly.", ex);
-                    }
-                }
-                else // at least fire the prop changed event (if someone is listening)
-                {
                     if (e.Action != NotifyCollectionChangedAction.Move && e.Action != NotifyCollectionChangedAction.Replace)
                         this.OnPropertyChanged(nameof(Count));
                     this.OnPropertyChanged(@"Item[]");
+                    CollectionChanged?.Invoke(this, e);
+                    Debug.WriteLine($"fire collectionchanged");
                 }
+                catch (Exception ex)
+                {
+                    Log(@"Unable to fire collection changed event cleanly.", ex);
+                }
+            }
+            else // at least fire the prop changed event (if someone is listening)
+            {
+                if (e.Action != NotifyCollectionChangedAction.Move && e.Action != NotifyCollectionChangedAction.Replace)
+                    this.OnPropertyChanged(nameof(Count));
+                this.OnPropertyChanged(@"Item[]");
             }
         }
 
         private void Log(string message, Exception ex = null)
         {
-            if(ex == null)
+            if (ex == null)
                 Debug.WriteLine(message);
             else
                 Trace.TraceError(message, ex);
@@ -866,20 +807,40 @@ namespace DURF.Collections
             if (action == null)
                 return;
 
-            if ((!force && ShutOffCollectionChangedEventsOnUiThread) || !UseDispatcherForCollectionChanged || (PlatformImplementation.Dispatcher?.CheckAccess() ?? true))
+            if ((!force && ShutOffCollectionChangedEventsOnUiThread) || !UseDispatcherForCollectionChanged || (Globals.Dispatcher?.CheckAccess() ?? true))
             {
                 action();
             }
             else
             {
                 var allDone = new ManualResetEvent(false);
-                PlatformImplementation.Dispatcher.BeginInvoke(() =>
+                Globals.Dispatcher.BeginInvoke(() =>
                 {
-                    try { action(); }
-                    catch (Exception ex) { Log(@"Unable to finish changing collection", ex); }
-                    finally { allDone.Set(); }
+                    try
+                    {
+                        action();
+                    }
+                    catch (Exception ex)
+                    {
+                        Log(@"Unable to finish changing collection", ex);
+                    }
+                    finally
+                    {
+                        allDone.Set();
+                    }
                 });
                 allDone.WaitOne();
+            }
+        }
+
+        private void TrackUndo(Action action)
+        {
+            if (TrackChanges)
+            {
+                if (Globals.ScopeEachChange && Accumulator == null)
+                    SingleItemAccumulator.Track($"{Name ?? "Collection"} change", action);
+                else
+                    Accumulator?.AddUndo(action);
             }
         }
 
@@ -912,51 +873,52 @@ namespace DURF.Collections
             set
             {
                 PushToUiThreadSync(() =>
-                {
-                    if (value == _shutOffCollectionChangedEvents)
-                        return;
+                    {
+                        if (value == _shutOffCollectionChangedEvents)
+                            return;
 
-                    _shutOffCollectionChangedEvents = value;
+                        _shutOffCollectionChangedEvents = value;
 
-                    // Conforming to changes made to WPF in .Net 4.5, verification of the source collection for an itemscontrol
-                    // is done AFTER the handler for the CollectionChanged event is completed (BeginInvoke'd)
-                    // This verification ensures that the ItemsControl generated items is consistent with the bound collection items
-                    // if the two are different, then an InvalidOperationException is thrown.
+                        // Conforming to changes made to WPF in .Net 4.5, verification of the source collection for an itemscontrol
+                        // is done AFTER the handler for the CollectionChanged event is completed (BeginInvoke'd)
+                        // This verification ensures that the ItemsControl generated items is consistent with the bound collection items
+                        // if the two are different, then an InvalidOperationException is thrown.
 
-                    // To mitigate this, do a Dispatcher.Wait() before shutting off the CollectionChanged event firing so that this 
-                    // verification can complete (processes all BeginInvoke'd actions)
-                    /* Handles this scenario:
-                     * Add
-                     * CollChanged (add)
-                     * Shutoff collectionchgd
-                     * Add
-                     * ItemsControl Verification() (you said there's 1, but now there's 2?  wth??)
-                     * Add
-                     * Add
-                     * Exception caught on Dispatcher thread (InvalidOperation)
-                     * Turn on collectionchgd
-                     * CollChg (Reset)
-                     *
-                     * Now that workflow is transformed to this with the Dispatcher.Wait() call:
-                     * Add
-                     * CollChanged
-                     * Dispatcher.Wait() -- ItemsControl Verification() (you said there's 1, and yes there is only 1)
-                     * Shutoff collectionchgd
-                     * Add
-                     * Add
-                     * Add
-                     * Turn on collectionchgd
-                     * CollChg (Reset)
-                     */
+                        // To mitigate this, do a Dispatcher.Wait() before shutting off the CollectionChanged event firing so that this 
+                        // verification can complete (processes all BeginInvoke'd actions)
+                        /* Handles this scenario:
+                         * Add
+                         * CollChanged (add)
+                         * Shutoff collectionchgd
+                         * Add
+                         * ItemsControl Verification() (you said there's 1, but now there's 2?  wth??)
+                         * Add
+                         * Add
+                         * Exception caught on Dispatcher thread (InvalidOperation)
+                         * Turn on collectionchgd
+                         * CollChg (Reset)
+                         *
+                         * Now that workflow is transformed to this with the Dispatcher.Wait() call:
+                         * Add
+                         * CollChanged
+                         * Dispatcher.Wait() -- ItemsControl Verification() (you said there's 1, and yes there is only 1)
+                         * Shutoff collectionchgd
+                         * Add
+                         * Add
+                         * Add
+                         * Turn on collectionchgd
+                         * CollChg (Reset)
+                         */
 
-                    if (UseDispatcherForCollectionChanged && CollectionChanged != null)
-                        PlatformImplementation.Dispatcher?.Wait();
+                        if (UseDispatcherForCollectionChanged && CollectionChanged != null)
+                            Globals.Dispatcher?.Wait();
 
-                    if (!_shutOffCollectionChangedEvents && _changeDetectedWhileNotificationIsShutOff)
-                        OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
-                    else
-                        _changeDetectedWhileNotificationIsShutOff = false;
-                }, true);
+                        if (!_shutOffCollectionChangedEvents && _changeDetectedWhileNotificationIsShutOff)
+                            OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+                        else
+                            _changeDetectedWhileNotificationIsShutOff = false;
+                    },
+                    true);
             }
         }
 
@@ -1193,13 +1155,13 @@ namespace DURF.Collections
             {
                 var key = enumerator.Name;
                 if (key == @"UseDispatcherForCollectionChanged")
-                    UseDispatcherForCollectionChanged = (bool)enumerator.Value;
+                    UseDispatcherForCollectionChanged = (bool) enumerator.Value;
                 else if (key == @"BlockCollectionChanged")
-                    _shutOffCollectionChangedEvents = (bool)enumerator.Value;
+                    _shutOffCollectionChangedEvents = (bool) enumerator.Value;
                 else if (key == @"Items")
                     _itemsDeserialized = info.GetValue(@"Items", typeof(List<TType>)) as List<TType>;
                 else if (key == @"TrackChanges")
-                    TrackChanges = (bool)info.GetValue(@"TrackChanges", typeof(bool));
+                    TrackChanges = (bool) info.GetValue(@"TrackChanges", typeof(bool));
             }
         }
 
@@ -1248,7 +1210,7 @@ namespace DURF.Collections
         /// <inheritdoc />
         public TType Dequeue()
         {
-            if (!((IQueue<TType>)this).TryDequeue(out var item))
+            if (!((IQueue<TType>) this).TryDequeue(out var item))
             {
                 throw new IndexOutOfRangeException($"Queue is empty!");
             }
@@ -1284,7 +1246,7 @@ namespace DURF.Collections
         /// <inheritdoc />
         public TType Pop()
         {
-            if (!((IStack<TType>)this).TryPop(out var item))
+            if (!((IStack<TType>) this).TryPop(out var item))
             {
                 throw new IndexOutOfRangeException($"Stack is empty!");
             }

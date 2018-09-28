@@ -26,7 +26,7 @@ namespace URF
             base.OnStartup(e);
             // current dispatcher is the UI thread for the App
             WpfDispatcher.Initialize(Dispatcher.CurrentDispatcher);
-            PlatformImplementation.Dispatcher = new WpfDispatcher();
+            Globals.Dispatcher = new WpfDispatcher();
         }
 
         #endregion

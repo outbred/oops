@@ -56,11 +56,11 @@ namespace DURF
                     if (currentValue != null && currentValue.Equals(value))
                         return false;
 
-                    if (OnPropertyChanging(name, currentValue, raisePropChanged))
+                    if (OnPropertyChanging(name, currentValue, raisePropChanged, value))
                         PropertyMap[name] = value;
                     else return false;
                 }
-                else if (OnPropertyChanging(name, currentValue, raisePropChanged))
+                else if (OnPropertyChanging(name, currentValue, raisePropChanged, value))
                     PropertyMap.Add(name, value);
                 else return false;
             }
@@ -91,9 +91,11 @@ namespace DURF
         /// <param name="name"></param>
         /// <param name="currentValue">value before the change</param>
         /// <param name="raiseEvent">whether or not the PropertyChanged event will actually be raised</param>
-        protected virtual bool OnPropertyChanging(string name, object currentValue, bool raiseEvent)
+        protected virtual bool OnPropertyChanging(string name, object currentValue, bool raiseEvent, object newValue)
         {
-            if(TrackChanges)
+            if (TrackChanges && Globals.ScopeEachChange && Accumulator == null)
+                SingleItemAccumulator.Track($"{name} changed to {newValue}", () => Set(currentValue, name, raiseEvent));
+            else if (TrackChanges)
                 Accumulator?.AddUndo(() => Set(currentValue, name, raiseEvent));
 
             return true;
@@ -105,7 +107,7 @@ namespace DURF
         /// If this object needs to be locally scoped, set the Accumulator here.
         /// Otherwise, all changes go into the global Accumulator.Current
         /// </summary>
-        public Accumulator Accumulator
+        public virtual Accumulator Accumulator
         {
             get => _overridden ?? Accumulator.Current;
             set => _overridden = value;

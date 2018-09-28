@@ -28,12 +28,15 @@ namespace DURF.Collections
         private ConcurrentList<NotifyCollectionChangedEventArgs> _pendingNotifications = new ConcurrentList<NotifyCollectionChangedEventArgs>();
 
         #region Properties
+
         private object SyncRoot => ((ICollection) _internal).SyncRoot;
 
         /// <inheritdoc />
         public bool IsSynchronized { get; } = true;
 
-        public bool TrackChanges { get; set; }
+        public bool TrackChanges { get; set; } = true;
+
+        public string Name { get; set; }
 
         private Accumulator _overridden = null;
 
@@ -63,51 +66,52 @@ namespace DURF.Collections
             set
             {
                 PushToUiThreadSync(() =>
-                {
-                    if (value == _shutOffCollectionChangedEvents)
-                        return;
+                    {
+                        if (value == _shutOffCollectionChangedEvents)
+                            return;
 
-                    _shutOffCollectionChangedEvents = value;
+                        _shutOffCollectionChangedEvents = value;
 
-                    // Conforming to changes made to WPF in .Net 4.5, verification of the source collection for an itemscontrol
-                    // is done AFTER the handler for the CollectionChanged event is completed (BeginInvoke'd)
-                    // This verification ensures that the ItemsControl generated items is consistent with the bound collection items
-                    // if the two are different, then an InvalidOperationException is thrown.
+                        // Conforming to changes made to WPF in .Net 4.5, verification of the source collection for an itemscontrol
+                        // is done AFTER the handler for the CollectionChanged event is completed (BeginInvoke'd)
+                        // This verification ensures that the ItemsControl generated items is consistent with the bound collection items
+                        // if the two are different, then an InvalidOperationException is thrown.
 
-                    // To mitigate this, do a Dispatcher.Wait() before shutting off the CollectionChanged event firing so that this 
-                    // verification can complete (processes all BeginInvoke'd actions)
-                    /* Handles this scenario:
-                     * Add
-                     * CollChanged (add)
-                     * Shutoff collectionchgd
-                     * Add
-                     * ItemsControl Verification() (you said there's 1, but now there's 2?  wth??)
-                     * Add
-                     * Add
-                     * Exception caught on Dispatcher thread (InvalidOperation)
-                     * Turn on collectionchgd
-                     * CollChg (Reset)
-                     *
-                     * Now that workflow is transformed to this with the Dispatcher.Wait() call:
-                     * Add
-                     * CollChanged
-                     * Dispatcher.Wait() -- ItemsControl Verification() (you said there's 1, and yes there is only 1)
-                     * Shutoff collectionchgd
-                     * Add
-                     * Add
-                     * Add
-                     * Turn on collectionchgd
-                     * CollChg (Reset)
-                     */
+                        // To mitigate this, do a Dispatcher.Wait() before shutting off the CollectionChanged event firing so that this 
+                        // verification can complete (processes all BeginInvoke'd actions)
+                        /* Handles this scenario:
+                         * Add
+                         * CollChanged (add)
+                         * Shutoff collectionchgd
+                         * Add
+                         * ItemsControl Verification() (you said there's 1, but now there's 2?  wth??)
+                         * Add
+                         * Add
+                         * Exception caught on Dispatcher thread (InvalidOperation)
+                         * Turn on collectionchgd
+                         * CollChg (Reset)
+                         *
+                         * Now that workflow is transformed to this with the Dispatcher.Wait() call:
+                         * Add
+                         * CollChanged
+                         * Dispatcher.Wait() -- ItemsControl Verification() (you said there's 1, and yes there is only 1)
+                         * Shutoff collectionchgd
+                         * Add
+                         * Add
+                         * Add
+                         * Turn on collectionchgd
+                         * CollChg (Reset)
+                         */
 
-                    if (UseDispatcherForCollectionChanged && CollectionChanged != null)
-                        PlatformImplementation.Dispatcher?.Wait();
+                        if (UseDispatcherForCollectionChanged && CollectionChanged != null)
+                            Globals.Dispatcher?.Wait();
 
-                    if (!_shutOffCollectionChangedEvents && _changeDetectedWhileNotificationIsShutOff)
-                        OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
-                    else
-                        _changeDetectedWhileNotificationIsShutOff = false;
-                }, true);
+                        if (!_shutOffCollectionChangedEvents && _changeDetectedWhileNotificationIsShutOff)
+                            OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+                        else
+                            _changeDetectedWhileNotificationIsShutOff = false;
+                    },
+                    true);
             }
         }
 
@@ -155,7 +159,7 @@ namespace DURF.Collections
         #region Extra methods
 
         /// <summary>
-        /// Replace entire dictionary with another.  Use this because it is done behind the lock.
+        /// Replace entire dictionary with another.
         /// </summary>
         public void Replace(IDictionary<TKey, TValue> source)
         {
@@ -163,10 +167,9 @@ namespace DURF.Collections
             {
                 lock (SyncRoot)
                 {
-                    var items = _internal.ToDictionary(p => p.Key, p => p.Value);
+                    var items = _internal;
                     _internal = new Dictionary<TKey, TValue>(source);
-                    if (TrackChanges)
-                        Accumulator?.AddUndo(() => this.Replace(items));
+                    TrackUndo(() => this.Replace(items));
                     OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
                 }
             });
@@ -191,8 +194,7 @@ namespace DURF.Collections
                     {
                         var item = new KeyValuePair<TKey, TValue>(key, value);
                         _internal.Add(key, value);
-                        if (TrackChanges)
-                            Accumulator?.AddUndo(() => Remove(key));
+                        TrackUndo(() => Remove(key));
 
                         OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, item));
                         result = true;
@@ -221,8 +223,7 @@ namespace DURF.Collections
                     if (_internal.ContainsKey(key))
                     {
                         var item = _internal[key];
-                        if (TrackChanges)
-                            Accumulator?.AddUndo(() => Add(key, item));
+                        TrackUndo(() => Add(key, item));
 
                         result = _internal.Remove(key);
                         OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, item));
@@ -250,8 +251,7 @@ namespace DURF.Collections
                     if (_internal.TryGetValue(key, out var v))
                     {
                         var item = v;
-                        if (TrackChanges)
-                            Accumulator?.AddUndo(() => Add(key, item));
+                        TrackUndo(() => Add(key, item));
 
                         result = _internal.Remove(key);
                         OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, v));
@@ -297,8 +297,7 @@ namespace DURF.Collections
                 lock (SyncRoot)
                 {
                     _internal.Add(item.Key, item.Value);
-                    if (TrackChanges)
-                        Accumulator?.AddUndo(() => Remove(item.Key));
+                    TrackUndo(() => Remove(item.Key));
 
                     OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, item));
                 }
@@ -323,15 +322,13 @@ namespace DURF.Collections
             {
                 lock (SyncRoot)
                 {
-                    if (TrackChanges)
-                        Accumulator?.AddUndo
-                        (() =>
-                        {
-                            foreach (var pair in pairs)
-                                _internal.Remove(pair.Key);
+                    TrackUndo(() =>
+                    {
+                        foreach (var pair in pairs)
+                            _internal.Remove(pair.Key);
 
-                            OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
-                        });
+                        OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+                    });
 
                     foreach (var pair in pairs)
                         if (!ContainsKey(pair.Key))
@@ -350,8 +347,7 @@ namespace DURF.Collections
                 {
                     var pairs = this._internal.ToDictionary(p => p.Key, p => p.Value);
                     _internal.Clear();
-                    if (TrackChanges)
-                        Accumulator?.AddUndo(() => AddRange(pairs));
+                    TrackUndo(() => AddRange(pairs));
 
                     OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
                 }
@@ -387,8 +383,7 @@ namespace DURF.Collections
                     TValue value;
                     if (_internal.TryGetValue(item.Key, out value))
                     {
-                        if (TrackChanges)
-                            Accumulator?.AddUndo(() => Add(item.Key, value));
+                        TrackUndo(() => Add(item.Key, value));
                         result = _internal.Remove(item.Key);
                         OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, item));
                     }
@@ -423,7 +418,7 @@ namespace DURF.Collections
         IEnumerable<TValue> IReadOnlyDictionary<TKey, TValue>.Values => Values;
 
         /// <inheritdoc />
-        ICollection IDictionary.Values => (ICollection)Values;
+        ICollection IDictionary.Values => (ICollection) Values;
 
         public bool IsReadOnly => false;
 
@@ -444,8 +439,7 @@ namespace DURF.Collections
                 {
                     var item = new KeyValuePair<TKey, TValue>(key, value);
                     _internal.Add(key, value);
-                    if (TrackChanges)
-                        Accumulator?.AddUndo(() => Remove(key));
+                    TrackUndo(() => Remove(key));
 
                     OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, item));
                 }
@@ -462,8 +456,7 @@ namespace DURF.Collections
                     TValue value;
                     if (_internal.TryGetValue(key, out value))
                     {
-                        if (TrackChanges)
-                            Accumulator?.AddUndo(() => Add(key, value));
+                        TrackUndo(() => Add(key, value));
                         result = _internal.Remove(key);
                         OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Remove, new KeyValuePair<TKey, TValue>(key, value)));
                     }
@@ -497,8 +490,7 @@ namespace DURF.Collections
                         var oldItem = new KeyValuePair<TKey, TValue>(key, oldValue);
                         _internal[key] = value;
                         var newItem = new KeyValuePair<TKey, TValue>(key, value);
-                        if (TrackChanges)
-                            Accumulator?.AddUndo(() => this[key] = oldValue);
+                        TrackUndo(() => this[key] = oldValue);
 
                         if (exist)
                             OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Replace, newItem, oldItem));
@@ -583,6 +575,7 @@ namespace DURF.Collections
                             OnPropertyChanged(new PropertyChangedEventArgs(nameof(Count)));
                             break;
                     }
+
                     CollectionChanged?.Invoke(this, e);
                 }
                 catch (Exception ex)
@@ -602,20 +595,40 @@ namespace DURF.Collections
             if (action == null)
                 return;
 
-            if ((!force && ShutOffCollectionChangedEventsOnUiThread) || !UseDispatcherForCollectionChanged || (PlatformImplementation.Dispatcher?.CheckAccess() ?? true))
+            if ((!force && ShutOffCollectionChangedEventsOnUiThread) || !UseDispatcherForCollectionChanged || (Globals.Dispatcher?.CheckAccess() ?? true))
             {
                 action();
             }
             else
             {
                 var allDone = new ManualResetEvent(false);
-                PlatformImplementation.Dispatcher.BeginInvoke(() =>
+                Globals.Dispatcher.BeginInvoke(() =>
                 {
-                    try { action(); }
-                    catch (Exception ex) { Debug.WriteLine(@"Unable to finish changing collection", ex); }
-                    finally { allDone.Set(); }
+                    try
+                    {
+                        action();
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine(@"Unable to finish changing collection", ex);
+                    }
+                    finally
+                    {
+                        allDone.Set();
+                    }
                 });
                 allDone.WaitOne();
+            }
+        }
+
+        private void TrackUndo(Action action)
+        {
+            if (TrackChanges)
+            {
+                if (Globals.ScopeEachChange && Accumulator == null)
+                    SingleItemAccumulator.Track($"{Name ?? "Dictionary"} change", action);
+                else
+                    Accumulator?.AddUndo(action);
             }
         }
     }
