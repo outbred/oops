@@ -1,2 +1,4 @@
-# URF
-.NET Undo/Redo Framework
+# DURF
+Cross-platform Do/Undo/Redo Framework
+
+
