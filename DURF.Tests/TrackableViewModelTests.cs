@@ -81,7 +81,7 @@ namespace DURF.Tests
             foreach (var prop in simple.GetType().GetProperties(BindingFlags.Instance | BindingFlags.Public).Where(p => p.CanRead && p.CanWrite && p.Name != nameof(TrackableViewModel.Accumulator)))
             {
                 Assert.IsTrue(propChanges.ContainsKey(prop.Name), $"Property {prop.Name} was not raised!");
-                Assert.IsTrue(propChanges[prop.Name] > 0);
+                Assert.IsTrue(propChanges[prop.Name] > 0 && propChanges[prop.Name] < 3);
             }
         }
 

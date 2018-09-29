@@ -8,7 +8,7 @@ using DURF.Interfaces;
 
 namespace DURF
 {
-    public class TrackableScopesManager : TrackableViewModel
+    public class TrackableScopesManager : TrackableViewModel, ITrackableScopesManager
     {
         protected override bool TrackChanges => false;
 

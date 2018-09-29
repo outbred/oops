@@ -338,17 +338,14 @@ namespace DURF.Collections
             {
                 lock (SyncRoot)
                 {
-                    TrackUndo(() =>
-                    {
-                        foreach (var pair in pairs)
-                            _internal.Remove(pair.Key);
-
-                        OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
-                    });
-
                     foreach (var pair in pairs)
+                    {
                         if (!ContainsKey(pair.Key))
+                        {
                             _internal.Add(pair.Key, pair.Value);
+                            TrackUndo(() => Remove(pair.Key));
+                        }
+                    }
 
                     OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
                 }
