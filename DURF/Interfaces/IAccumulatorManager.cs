@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace DURF.Interfaces 
 {
-    public interface ITrackableScopesManager : INotifyPropertyChanged
+    public interface IAccumulatorManager : INotifyPropertyChanged
     {
         /// <summary>
         /// Readonly view into Undoables collection.  To add to the Undoables, use the Add() method

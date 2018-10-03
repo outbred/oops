@@ -11,7 +11,7 @@ namespace DURF
         {
             var acc = new SingleItemAccumulator(name, undo);
             acc.ClosedForBusiness = true;
-            TrackableScopesManager.Instance.Add(acc, ScopeState.Do);
+            AccumulatorManager.Instance.Add(acc, ScopeState.Do);
         }
 
         private bool ClosedForBusiness { get; set; }
@@ -20,7 +20,7 @@ namespace DURF
         {
             this.AddUndo(undo);
             ClosedForBusiness = true;
-            TrackableScopesManager.Instance.Add(this, ScopeState.Do);
+            AccumulatorManager.Instance.Add(this, ScopeState.Do);
         }
 
         #region Overrides of Accumulator

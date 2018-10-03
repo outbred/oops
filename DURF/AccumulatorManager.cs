@@ -8,7 +8,7 @@ using DURF.Interfaces;
 
 namespace DURF
 {
-    public class TrackableScopesManager : TrackableViewModel, ITrackableScopesManager
+    public class AccumulatorManager : TrackableViewModel, IAccumulatorManager
     {
         protected override bool TrackChanges => false;
 
@@ -25,16 +25,16 @@ namespace DURF
         /// </summary>
         public IReadOnlyCollection<Accumulator> Redoables => _redoables;
 
-        private static TrackableScopesManager _instance = null;
+        private static AccumulatorManager _instance = null;
 
         /// <summary>
         /// Singleton instance, if that's your flavor.  If using injection (preferred), can use this as well depending on if you feed the injection container this instance.
         /// </summary>
-        public static TrackableScopesManager Instance
+        public static AccumulatorManager Instance
         {
             get
             {
-                Interlocked.CompareExchange(ref _instance, new TrackableScopesManager(), null);
+                Interlocked.CompareExchange(ref _instance, new AccumulatorManager(), null);
                 return _instance;
             }
         }

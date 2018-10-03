@@ -151,7 +151,7 @@ namespace DURF.Demo
             }
         }
 
-        public TrackableScopesManager Manager => TrackableScopesManager.Instance;
+        public AccumulatorManager Manager => AccumulatorManager.Instance;
 
         public Accumulator Current => Accumulator.Current;
     }

@@ -55,7 +55,7 @@ namespace DURF
         {
             if (Accumulator != null)
             {
-                TrackableScopesManager.Instance.Add(Accumulator, _state);
+                AccumulatorManager.Instance.Add(Accumulator, _state);
                 Accumulator.Current.Close(Accumulator.Name);
                 Accumulator = null;
             }
