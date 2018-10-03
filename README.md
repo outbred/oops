@@ -57,7 +57,7 @@ I welcome and encourage all pull requests. It usually will take me within 24-72 
 [Brent Bulla](https://github.com/outbred) ([@outbred](https://www.twitter.com/outbred))
 ([Insta](https://www.instagram.com/outbred))
 
-> If you found this project helpful or you learned something from the source code and want to thank me, consider buying me a cup of :soda:
+> If you found this project helpful or you learned something from the source code and want to thank me, consider buying me a cup of  <img src="https://vignette.wikia.nocookie.net/logopedia/images/a/ad/Dr._Pepper_1958.jpg/revision/latest?cb=20100924201743" height="25em" />
 >
 > * [PayPal](https://www.paypal.me/outbred/)
 
