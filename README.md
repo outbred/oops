@@ -13,7 +13,7 @@ It is common for many user-facing applications to want some kind of undo/redo fu
   - There may be 50 objects that are created and/or modified for any given user action and it would be tedious (at best) or impossible (for any real-world use-case) to funnel all changes into one undo action for the user by explicitly telling each object at the time of the change how to do it, and then how to undo it.
   - DURF manages all of this for you by observing any and all property changes in a ViewModel (derived from TrackableViewModel) and any collection changes (TrackableCollection (list, stack, queue) or TrackableDictionary), and accumulating them into one undo action either globally or locally.
   
-# Why distinguish between global and local changes?  Glad you asked.
+## Why distinguish between global and local changes?  Glad you asked.
 
    Presume you have an applicatino with a mainwindow.  Anything that goes on in the app will observed and coalesced into undo actions through a menu-driven undo/redo system (like the back and forward arrows we're all used to).
    
