@@ -6,8 +6,8 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{E92448EA-589B-4295-B6CB-296B88F0FC65}</ProjectGuid>
     <OutputType>WinExe</OutputType>
-    <RootNamespace>DURF.Demo</RootNamespace>
-    <AssemblyName>DURF.Demo</AssemblyName>
+    <RootNamespace>oops.Demo</RootNamespace>
+    <AssemblyName>oops.Demo</AssemblyName>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <ProjectTypeGuids>{60dc8134-eba5-43b8-bcc9-bb4bc16c2548};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
@@ -130,9 +130,9 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\DURF\DURF.csproj">
+    <ProjectReference Include="..\oops\oops.csproj">
       <Project>{4439b36f-b0a3-41cc-803d-d20eaea96d3a}</Project>
-      <Name>DURF</Name>
+      <Name>oops</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

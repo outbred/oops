@@ -3,11 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.28010.2016
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DURF.Demo", "URF\DURF.Demo.csproj", "{E92448EA-589B-4295-B6CB-296B88F0FC65}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "oops.Demo", "oops.Demo\oops.Demo.csproj", "{E92448EA-589B-4295-B6CB-296B88F0FC65}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DURF", "DURF\DURF.csproj", "{4439B36F-B0A3-41CC-803D-D20EAEA96D3A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "oops", "oops\oops.csproj", "{4439B36F-B0A3-41CC-803D-D20EAEA96D3A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DURF.Tests", "DURF.Tests\DURF.Tests.csproj", "{66FD351B-7C20-4C28-AAC3-2D5127E9E236}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "oops.Tests", "oops.Tests\oops.Tests.csproj", "{66FD351B-7C20-4C28-AAC3-2D5127E9E236}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -26,7 +26,6 @@ Global
 		{66FD351B-7C20-4C28-AAC3-2D5127E9E236}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{66FD351B-7C20-4C28-AAC3-2D5127E9E236}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{66FD351B-7C20-4C28-AAC3-2D5127E9E236}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{66FD351B-7C20-4C28-AAC3-2D5127E9E236}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
