@@ -15,6 +15,9 @@ namespace oops
     {
         private Dictionary<string, object> _propMap = null;
 
+        /// <summary>
+        /// Flag to turn on change tracking for this ViewModel
+        /// </summary>
         protected virtual bool TrackChanges { get; } = true;
 
         protected virtual T Get<T>(T defaultValue, [CallerMemberName] string name = null)

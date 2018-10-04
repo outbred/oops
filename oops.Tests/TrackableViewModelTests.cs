@@ -12,6 +12,46 @@ namespace oops.Tests
     public class TrackableViewModelTests
     {
         [TestMethod]
+        public void TestScopeEachChange_On()
+        {
+            Globals.ScopeEachChange = true;
+            var simple = new SimpleViewModel(true);
+            var newC = new TrackableCollection<string>();
+
+            simple.ACollection = newC;
+            Assert.AreEqual(simple.ACollection, newC);
+            newC.Add("poop");
+            newC.Add("stinks");
+
+            simple.ADouble = 5;
+            Assert.AreEqual(simple.ADouble, 5);
+            simple.AnInt = 5;
+            Assert.AreEqual(simple.AnInt, 5);
+            simple.AString = "yupperz";
+            Assert.AreEqual(simple.AString, "yupperz");
+            simple.AnEnum = SimpleViewModel.TestEnum.Three;
+            Assert.AreEqual(SimpleViewModel.TestEnum.Three, simple.AnEnum);
+
+            simple.NullableDouble = null;
+            Assert.IsNull(simple.NullableDouble);
+            simple.NullableInt = null;
+            Assert.IsNull(simple.NullableInt);
+            simple.NullableEnum = null;
+            Assert.IsNull(simple.NullableEnum);
+            simple.ACollection = null;
+            Assert.IsNull(simple.ACollection);
+            simple.StrongReference = null;
+            Assert.IsNull(simple.StrongReference);
+            simple.StrongReferenceBoxed = null;
+            Assert.IsNull(simple.StrongReferenceBoxed);
+            var mgr = AccumulatorManager.Instance;
+            Assert.AreEqual(mgr.Undoables.Count, 46);
+
+            Globals.ScopeEachChange = false;
+        }
+
+
+        [TestMethod]
         public void TestPropertyChanges()
         {
             var simple = new SimpleViewModel(true);

@@ -12,8 +12,8 @@ namespace oops
     {
         protected override bool TrackChanges => false;
 
-        private TrackableCollection<Accumulator> _undoables = new TrackableCollection<Accumulator>();
-        private TrackableCollection<Accumulator> _redoables = new TrackableCollection<Accumulator>();
+        private TrackableCollection<Accumulator> _undoables = new TrackableCollection<Accumulator>() { TrackChanges = false};
+        private TrackableCollection<Accumulator> _redoables = new TrackableCollection<Accumulator>() { TrackChanges = false };
 
         /// <summary>
         /// Readonly view into Undoables collection.  To add to the Undoables, use the Add() method
