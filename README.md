@@ -1,4 +1,4 @@
-# DURF
+# oops
 First open source, cross-platform Do/Undo/Redo Framework that works in a user-driver application that's worth a dime.
 
 ## Premise
@@ -13,20 +13,19 @@ The difficulty in creating a general purpose undo/redo framework lies in tacklin
 
 - Making every character typed undoable, for example, can result in a klunky user experience, but hey it's a start.    
 - The ideal framework would allow the code to aggregate changes together
-- DURF allows either configuration or somewhere in-between.  It's all about the scope of the Accumulator you 'new' up and use.
+- **oops** allows either configuration or somewhere in-between.  It's all about the scope of the Accumulator you 'new' up and use.
     
     
 ### Observing changes in all objects in the system in an ordered fashion without explicitly knowing what all of them even are at the point of the user action.
 
 For example, there may be 50 objects that are created and/or modified for any given user action and it would be tedious (at best) or impossible (for any real-world use-case) to funnel all changes into one undo action for the user by explicitly telling each object at the time of the change how to do it, and then how to undo it.
-
-DURF manages all of this for you by observing any and all property changes in a ViewModel (derived from TrackableViewModel) and any collection changes (TrackableCollection - list, stack, queue - or TrackableDictionary), and accumulating them into one undo action either globally or locally.
+**oops** manages all of this for you by observing any and all property changes in a ViewModel (derived from TrackableViewModel) and any collection changes (TrackableCollection - list, stack, queue - or TrackableDictionary), and accumulating them into one undo action either globally or locally.
   
 ## Why distinguish between global and local changes?  Glad you asked.
 
 Presume you have an application with a main window/form/page of some sort.  Anything that goes on in the app will observed and coalesced into undo actions through a menu-driven undo/redo system (like the back and forward arrows we're all used to).
    
-Now, presume you have a dialog that pops up that does some undoable stuff, and also pops a different dialog that also does some undoable stuff. Depending on the project manager's whimsy, all of those actions from both dialogs should be aggregated into one undoable action for the user, or maybe there should be two.  Either scenario (and really any scenario I can think of) is available through DURF with the option to create singleton/global scopes or local scopes, either of which can go onto the global undo stack.
+Now, presume you have a dialog that pops up that does some undoable stuff, and also pops a different dialog that also does some undoable stuff. Depending on the project manager's whimsy, all of those actions from both dialogs should be aggregated into one undoable action for the user, or maybe there should be two.  Either scenario (and really any scenario I can think of) is available through **oops** with the option to create singleton/global scopes or local scopes, either of which can go onto the global undo stack.
  
 
 ## Components to support Undo/Redo for any ViewModel or Collection change
@@ -74,7 +73,7 @@ Now, presume you have a dialog that pops up that does some undoable stuff, and a
 
 ## Demo app
 
-  * See the DURF.Demo WPF application
+  * See the oops.Demo WPF application
   
   
 ### Show me some :heart: and star this repo to support my project
@@ -87,7 +86,7 @@ I welcome and encourage all pull requests. It usually will take me within 24-72 
 2.  If its a feature, bugfix, or anything please only change code to what you specify.
 3.  Please keep PR titles easy to read and descriptive of changes, this will make them easier to merge :)
 4.  Pull requests _must_ be made against `develop` branch. Any other branch (unless specified by the maintainers) will get rejected.
-5.  Check for existing [issues](https://github.com/outbred/DURF/issues) first, before filing an issue.
+5.  Check for existing [issues](https://github.com/outbred/oops/issues) first, before filing an issue.
 6.  Make sure you follow the set standard as all other projects in this repo do
 
 ### Created & Maintained By
