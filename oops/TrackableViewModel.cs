@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using DURF.Collections;
-using DURF.Interfaces;
+using oops.Collections;
+using oops.Interfaces;
 
-namespace DURF 
+namespace oops 
 {
     /// <summary>
     /// ViewModel base class that raise prop changed using convenient Get/Set methods and tracks property changes

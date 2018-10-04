@@ -2,7 +2,7 @@
 using System.ComponentModel;
 using System.Threading.Tasks;
 
-namespace DURF.Interfaces 
+namespace oops.Interfaces 
 {
     public interface IAccumulatorManager : INotifyPropertyChanged
     {

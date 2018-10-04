@@ -5,10 +5,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using DURF.Collections;
-using DURF.Interfaces;
+using oops.Collections;
+using oops.Interfaces;
 
-namespace DURF
+namespace oops
 {
     /// <summary>
     /// An accumulator of actions, each targeted at undoing some other action (user-generated or otherwise)

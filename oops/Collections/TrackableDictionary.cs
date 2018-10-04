@@ -8,9 +8,9 @@ using System.Linq;
 using System.Runtime.Serialization;
 using System.Security.Permissions;
 using System.Threading;
-using DURF.Interfaces;
+using oops.Interfaces;
 
-namespace DURF.Collections
+namespace oops.Collections
 {
     /// <summary>
     /// A powerhouse dictionary that tracks changes, fire CollectionChanged events, and raises property changed.

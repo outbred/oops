@@ -4,7 +4,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
-namespace DURF
+namespace oops
 {
     public class AsyncCommand : AsyncCommand<object>
     {

@@ -2,7 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 
-namespace DURF.Interfaces 
+namespace oops.Interfaces 
 {
     /// <summary>
     /// Queue like methods

@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace DURF.Tests
+namespace oops.Tests
 {
     public class TrackingTestMethodAttribute : TestMethodAttribute
     {

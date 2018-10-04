@@ -11,8 +11,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
-using DURF;
-using DURF.Interfaces;
+using oops;
+using oops.Interfaces;
 
 namespace UI.WpfCore.Services
 {

@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
-using DURF.Interfaces;
+using oops.Interfaces;
 
-namespace DURF
+namespace oops
 {
     public static class Globals
     {

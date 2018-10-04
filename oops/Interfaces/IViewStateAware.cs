@@ -1,4 +1,4 @@
-﻿namespace DURF.Interfaces 
+﻿namespace oops.Interfaces 
 {
     public interface IViewStateAware
     {

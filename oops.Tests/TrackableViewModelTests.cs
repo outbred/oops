@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
-using DURF.Collections;
+using oops.Collections;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace DURF.Tests
+namespace oops.Tests
 {
     [TestClass]
     public class TrackableViewModelTests

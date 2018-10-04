@@ -4,7 +4,7 @@
                  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:local="clr-namespace:URF"
-                 xmlns:demo="clr-namespace:DURF.Demo"
+                 xmlns:demo="clr-namespace:oops.Demo"
                  xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
                  mc:Ignorable="d"
                  d:DataContext="{d:DesignInstance d:Type=demo:MainWindowViewModel, IsDesignTimeCreatable=True}"
@@ -14,7 +14,7 @@
                  xmlns:metro="http://metro.mahapps.com/winfx/xaml/controls"
                  GlowBrush="{DynamicResource AccentColorBrush}"
                  BorderThickness="1" WindowStartupLocation="CenterScreen"
-                 Title="DURF Demo" HorizontalAlignment="Center" VerticalAlignment="Center" SizeToContent="WidthAndHeight"
+                 Title="oops Demo" HorizontalAlignment="Center" VerticalAlignment="Center" SizeToContent="WidthAndHeight"
                 TextElement.Foreground="{DynamicResource MaterialDesignBody}"
                  Background="{DynamicResource MaterialDesignPaper}">
     <Window.Resources>

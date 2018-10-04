@@ -5,11 +5,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Input;
-using DURF.Collections;
+using oops.Collections;
 
 #pragma warning disable 1998
 
-namespace DURF.Demo
+namespace oops.Demo
 {
     public class MainWindowViewModel : TrackableViewModel
     {

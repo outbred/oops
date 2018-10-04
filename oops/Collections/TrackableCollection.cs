@@ -9,9 +9,9 @@ using System.Runtime;
 using System.Runtime.Serialization;
 using System.Security.Permissions;
 using System.Threading;
-using DURF.Interfaces;
+using oops.Interfaces;
 
-namespace DURF.Collections
+namespace oops.Collections
 {
     /// <summary>
     /// An ordered collection that ensures it is always on the correct thread for the CollectionChanged event and fires the PropertyChanged event as well (on whatever thread).

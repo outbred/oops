@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using DURF.Collections;
+using oops.Collections;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace DURF.Tests
+namespace oops.Tests
 {
     [TestClass]
     public class TrackableDictionaryTests

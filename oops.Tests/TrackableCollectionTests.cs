@@ -4,11 +4,11 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using DURF.Collections;
-using DURF.Interfaces;
+using oops.Collections;
+using oops.Interfaces;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace DURF.Tests
+namespace oops.Tests
 {
     [TestClass]
     public class TrackableCollectionTests

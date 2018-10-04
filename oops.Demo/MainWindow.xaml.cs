@@ -13,9 +13,9 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
-using DURF;
-using DURF.Demo;
-using DURF.Interfaces;
+using oops;
+using oops.Demo;
+using oops.Interfaces;
 
 namespace URF
 {

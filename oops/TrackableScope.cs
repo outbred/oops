@@ -4,7 +4,7 @@ using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Text;
 
-namespace DURF
+namespace oops
 {
     /// <summary>
     /// indicates to the TrackableScopesManager where the TrackableScope should go and what state the system in in (just finished a redo?  Or is this a brand new scope for some user-driven process?)

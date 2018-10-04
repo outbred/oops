@@ -7,8 +7,8 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
-using DURF;
-using DURF.Collections;
+using oops;
+using oops.Collections;
 using UI.WpfCore.Services;
 
 namespace URF

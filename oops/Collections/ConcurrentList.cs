@@ -6,9 +6,9 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime;
 using System.Runtime.CompilerServices;
-using DURF.Interfaces;
+using oops.Interfaces;
 
-namespace DURF.Collections
+namespace oops.Collections
 {
     /// <summary>
     /// Thread-safe list.  No change tracking.  Also has efficient Queue and Stack extensions

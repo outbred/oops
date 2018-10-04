@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 
-namespace DURF 
+namespace oops 
 {
     [DebuggerDisplay("{Name} with {Records.Count} records")]
     public class SingleItemAccumulator : Accumulator

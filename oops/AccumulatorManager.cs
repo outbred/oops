@@ -3,10 +3,10 @@ using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
-using DURF.Collections;
-using DURF.Interfaces;
+using oops.Collections;
+using oops.Interfaces;
 
-namespace DURF
+namespace oops
 {
     public class AccumulatorManager : TrackableViewModel, IAccumulatorManager
     {

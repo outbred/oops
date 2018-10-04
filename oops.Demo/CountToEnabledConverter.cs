@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
 
-namespace DURF.Demo
+namespace oops.Demo
 {
     public class CountToEnabledConverter : IValueConverter
     {
