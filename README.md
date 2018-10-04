@@ -1,5 +1,6 @@
 # oops
 First open source, cross-platform Do/Undo/Redo Framework that works in a user-driver application that's worth a dime.
+Available on nuget [here](https://www.nuget.org/packages/oops/1.0.0)
 
 ## Premise
 
