@@ -17,7 +17,7 @@ The difficulty in creating a general purpose undo/redo framework lies in tacklin
 - **oops** allows either configuration or somewhere in-between.  It's all about the scope of the Accumulator you 'new' up and use.
     
     
-### Observing changes in all objects in the system in an ordered fashion without explicitly knowing what all of them even are at the point of the user action.
+### Observing changes in all objects in the system in an ordered fashion for N unknown objects
 
 For example, there may be 50 objects that are created and/or modified for any given user action and it would be tedious (at best) or impossible (for any real-world use-case) to funnel all changes into one undo action for the user by explicitly telling each object at the time of the change how to do it, and then how to undo it.
 **oops** manages all of this for you by observing any and all property changes in a ViewModel (derived from TrackableViewModel) and any collection changes (TrackableCollection - list, stack, queue - or TrackableDictionary), and accumulating them into one undo action either globally or locally.
